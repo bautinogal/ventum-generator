@@ -1,0 +1,119 @@
+/* App.css */
+.container {
+    display: flex;
+    height: 100vh;
+    background: radial-gradient(ellipse at bottom, var(--grey-900) 0%, var(--grey-900) 100%);
+    overflow: hidden;
+}
+
+.main-content {
+    margin-left: 4vw;
+    width: 96vw;
+    transition: width 0.5s ease;
+}
+
+.main-content.expanded {
+    margin-left: 18vw;
+    width: 82vw;
+    /* Ancho cuando está expandido */
+}
+
+.sidebar {
+    position: fixed;
+    z-index: 100;
+    width: 4vw;
+    /* Ancho inicial */
+    height: 100vh;
+    background-color: var(--grey-700);
+    /* background-color: var(--primary-main); */
+    color: var(--secondary-contrastText);
+    transition: width 0.5s ease;
+    /* Animación */
+    overflow-x: hidden;
+    /* Ocultar contenido desbordado */
+}
+
+.sidebar.expanded {
+    width: 18vw;
+    /* Ancho cuando está expandido */
+}
+
+.sidebar-logo {
+    text-align: center;
+    align-content: center;
+    /* Ancho inicial */
+    height: 2em;
+    
+    color: var(--secondary-contrastText);
+    transition: width 0.5s ease;
+    /* Animación */
+    overflow: hidden;
+    /* Ocultar contenido desbordado */
+}
+
+.sidebar-logo.expanded {
+    width: 240px;
+}
+
+.sidebar-profile {
+    display: flex;
+    margin: 1em;
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 100;
+}
+
+.sidebar-profile.expanded {
+    width: 240px;
+}
+
+.sidebar-notifications {
+    margin: 1em 1em 1em 1em;
+}
+
+.sidebar-notifications.expanded {
+    width: 240px;
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    height: 100px;
+
+    /* Altura del div, ajústala según tus necesidades */
+    border-bottom: 2px solid #ccc;
+    /* Solo para fines de visualización */
+}
+
+.logo-image {
+    height: 60px;
+    max-height: 100%;
+    /* Ajustar a la altura del contenedor */
+    object-fit: contain;
+    /* Mantiene la relación de aspecto */
+    margin-left: 15px;
+    /* Alineación a la izquierda */
+}
+
+.sidebar-category-button {
+    display: flex;
+    align-items: center;
+    color: var(--primary-contrastText);
+}
+
+.sidebar-category-button-text {
+    text-transform: none !important;
+    color: white !important;
+    background-color: transparent !important;
+    padding: 0 !important;
+    min-width: auto !important;
+}
+
+.sidebar-category-button-icon {
+    color: var(--primary-contrastText);
+}
+
+.sidebar-category-options {
+    margin: 10px;
+}

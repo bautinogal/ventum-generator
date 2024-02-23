@@ -1,0 +1,290 @@
+{
+    "title": "App Schema",
+    "description": "The App Model definition using JSON Schema https://json-schema.org/.",
+    "type": "object",
+    "properties": {
+        "general": {
+            "language": "esES"
+        },
+        "tables": {
+            "title": "SQL Schema",
+            "description": "SQL Entity Model",
+            "type": "object",
+            "properties": {
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/user"
+                    }
+                },
+                "rols": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rol"
+                    }
+                },
+                "genericPermissions": {
+                    "type": "array",
+                    "x-static": true,
+                    "items": {
+                        "$ref": "#/definitions/genericPermission"
+                    }
+                },
+                "customPermissions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/customPermission"
+                    }
+                },
+                "comments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/comment"
+                    }
+                },
+                "files": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/file"
+                    }
+                }
+            }
+        },
+        "style": {
+            "theme": {
+                "typography": {
+                    "fontFamily": "Montserrat, sans-serif",
+                    "fontSize": 14,
+                    "fontWeightLight": 300,
+                    "fontWeightRegular": 400,
+                    "fontWeightMedium": 500
+                },
+                "palette": {
+                    "primary": {
+                        "main": "#DF8A0E",
+                        "light": "#FFBB3B",
+                        "dark": "#B37800",
+                        "contrastText": "#FFFFFF"
+                    },
+                    "secondary": {
+                        "main": "#994895",
+                        "light": "#CA75C0",
+                        "dark": "#672C5F",
+                        "contrastText": "#FFFFFF"
+                    },
+                    "info": {
+                        "main": "#0E99DF",
+                        "light": "#6AC0FF",
+                        "dark": "#0073AC",
+                        "contrastText": "#FFFFFF"
+                    },
+                    "success": {
+                        "main": "#4CAF50",
+                        "light": "#80E27E",
+                        "dark": "#087F23",
+                        "contrastText": "#FFFFFF"
+                    },
+                    "error": {
+                        "main": "#F44336",
+                        "light": "#FF7961",
+                        "dark": "#BA000D",
+                        "contrastText": "#FFFFFF"
+                    },
+                    "warning": {
+                        "main": "#FF9800",
+                        "light": "#FFC947",
+                        "dark": "#C66900",
+                        "contrastText": "#000000"
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "user": {
+            "title": "User",
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "format": "email"
+                },
+                "password": {
+                    "type": "string",
+                    "x-hashed": true,
+                    "minLength": 8,
+                    "maxLength": 64
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "lastName": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "roles": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "$ref": "#/definitions/rol"
+                    }
+                },
+                "preferences": {
+                    "type": "object",
+                    "properties": {}
+                }
+            },
+            "required": [
+                "email",
+                "password"
+            ]
+        },
+        "rol": {
+            "title": "Rol",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "genericPermissions": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "$ref": "#/definitions/genericPermission"
+                    }
+                },
+                "customPermissions": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                        "$ref": "#/definitions/customPermission"
+                    }
+                }
+            },
+            "required": [
+                "name",
+                "genericPermissions",
+                "customPermissions"
+            ]
+        },
+        "genericPermission": {
+            "title": "Generic Permission",
+            "type": "object",
+            "x-static": true,
+            "properties": {
+                "table": {
+                    "$ref": "#/definitions/tables"
+                },
+                "action": {
+                    "type": "string",
+                    "enumNames": [
+                        "Read Table",
+                        "Write Table",
+                        "Read Files",
+                        "Write Files",
+                        "Read Comments",
+                        "Write Comments",
+                        "Read History"
+                    ],
+                    "enum": {
+                        "readTable": "Read Table",
+                        "writeTable": "Write Table",
+                        "readFiles": "Read Files",
+                        "writeFiles": "Write Files",
+                        "readComments": "Read Comments",
+                        "writeComments": "Write Comments",
+                        "readHistory": "Read History"
+                    }
+                },
+                "description": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "tableName",
+                "taactionble"
+            ]
+        },
+        "customPermission": {
+            "title": "Permission",
+            "type": "object",
+            "x-static": true,
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "name"
+            ]
+        },
+        "comment": {
+            "title": "Comment",
+            "type": "object",
+            "properties": {
+                "text": {
+                    "type": "string"
+                },
+                "table": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tables"
+                    }
+                },
+                "targetId": {
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "text",
+                "table",
+                "targetId"
+            ]
+        },
+        "file": {
+            "title": "File",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "table": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tables"
+                    }
+                },
+                "targetId": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "name",
+                "path",
+                "table",
+                "targetId"
+            ]
+        },
+        "tables": {
+            "type": "string",
+            "comment": "Will autopolulate with the tables on export, do not modify",
+            "enum": []
+        }
+    }
+}

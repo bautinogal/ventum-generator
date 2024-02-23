@@ -1,0 +1,14 @@
+export const up = function (knex) {
+        {{knexMigrationTemplateUp}}
+        {{knexMigrationTemplateUpDefaults}}
+};
+
+export const down = function (knex) {
+    knex.destroy();
+    return knex.schema
+        {{knexMigrationTemplateDown}}
+        // TODO: 
+        //.then(() => knex.schema.dropTableIfExists("productspurchasesMap"))
+};
+
+export const config = { transaction: true };

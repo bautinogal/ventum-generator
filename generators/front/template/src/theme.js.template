@@ -1,0 +1,12 @@
+//https://mui.com/material-ui/customization/default-theme           Default theme
+//https://bareynol.github.io/mui-theme-creator/#BottomNavigation    Try styles here (MUI V4, migth not work exactly like V5)
+
+//XML to JSON to JS script from paletton.com
+//raw.palette.colorset.reduce((p, x) => ({ ...p, [x._id]: x.color.reduce((pc, xc) => ({ ...pc, [xc._id.split(x._id + '-')[1]]: '#' + xc._rgb}), {})}), {});
+
+import { createTheme } from '@mui/material/styles';
+import { enUS, esES, frFR, deDE, itIT, jaJP, zhCN } from '@mui/x-data-grid';
+
+const defaultTheme = createTheme();
+
+export default {{MUItheme}} 
