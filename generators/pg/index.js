@@ -8,7 +8,8 @@ const __dirname = path.dirname(__filename);
 export const generate = async (schema, tables) => {
 
     const replace = {
-        envPG: fs.readFileSync(path.join(__dirname, '../../config/.env'), 'utf8'),
+        envPG: fs.existsSync(path.join(__dirname, '../../config/.env')) ?
+            fs.readFileSync(path.join(__dirname, '../../config/.env'), 'utf8') : '',
         envjsPG: `{
             admin: {
                 email: process.env.APP_ADMIN_EMAIL || 'admin@admin',
@@ -88,7 +89,7 @@ export const generate = async (schema, tables) => {
         knexMigrationTemplateDown: tables.map(t => `.then(() => knex.schema.dropTableIfExists('${t.name}'))`).reverse().join('\n'),
     };
 
-await copyAndReplaceDir(path.join(__dirname, 'template'), path.join(__dirname, '../../../output/pg'), replace);
+    await copyAndReplaceDir(path.join(__dirname, 'template'), path.join(__dirname, '../../../output/pg'), replace);
 };
 
 export default { generate }

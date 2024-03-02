@@ -96,6 +96,14 @@
     /* Alineación a la izquierda */
 }
 
+.notifications-container {
+    display: flex;
+    align-items: center;
+    height: 100px;
+
+    border-bottom: 2px solid #ccc;
+}
+
 .sidebar-category-button {
     display: flex;
     align-items: center;
@@ -117,3 +125,14 @@
 .sidebar-category-options {
     margin: 10px;
 }
+
+.sidebar-category-logout{
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%; 
+    padding: 10px; 
+    text-align-last: center;
+}
+
+

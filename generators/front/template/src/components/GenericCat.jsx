@@ -1,22 +1,18 @@
 import http from '../lib/http/index.js'
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
-    Avatar, Badge, Button, Dialog, DialogActions, DialogContent, IconButton, DialogContentText,
-    DialogTitle, Stack, Typography
+    Avatar, Badge, Box, Button, Breadcrumbs, Card, CardContent, Dialog, DialogActions, DialogContent, Divider, Grid, IconButton, DialogContentText,
+    DialogTitle, Stack, Tab, Tabs, Typography, Tooltip, Popper, Fade, Link, List, ListItem, ListItemButton, ListItemIcon, ListItemText
 } from '@mui/material';
 import {
     Add, AttachFile, Check, Close, CreditCard, Comment, Delete, Event, History, Notifications as NotificationIcon,
-    LocalActivity, Person, Receipt, Refresh, Timeline, Edit, Note
+    LocalActivity, Person, Receipt, Refresh, Timeline, Edit, Note, MoreHoriz, Visibility
 } from '@mui/icons-material';
-
-//import DashboardCat from './DashboardCat/DashboardCat.jsx';
-import Box from '@mui/material/Box';
 import { DataGrid, GridToolbar, GridActionsCellItem } from '@mui/x-data-grid';
 
 import validator from '@rjsf/validator-ajv8';
 import Form from '@rjsf/mui';
-
 
 const GenericCat = ({ selectedCat, auth }) => {
     const schema = useSelector(state => state.dashboard.data?.schema);
@@ -63,7 +59,8 @@ const GenericCat = ({ selectedCat, auth }) => {
         const typeMapper = {
             "character varying": "string",
             "bigint": "integer",
-            "timestamp with time zone": "date"
+            "timestamp with time zone": "date",
+            "jsonb": "object",
         }
         const formData = {};
         const uiSchema = {
@@ -118,143 +115,152 @@ const GenericCat = ({ selectedCat, auth }) => {
 
     const DataGridDemo = () => {
 
-        const [open, setOpen] = useState(false);
-        const handleClickOpen = () => setOpen(true);
-        const handleClose = (e, reason) => (reason === "backdropClick") ? null : setOpen(false);
+        const [selectedRow, setSelectedRow] = useState(null);
 
-        const AddModal = () => {
-            return (
-                <React.Fragment>
-                    <Dialog open={open} onClose={handleClose} maxWidth={'lg'} fullWidth disableBackdropClick>
-                        <DialogTitle id="titulo-dialogo">
-                            <IconButton
-                                onClick={handleClose}
-                                sx={{ position: 'absolute', right: 8, top: 8, color: (theme) => theme.palette.grey[500] }}
-                                children={<Close />} />
-                        </DialogTitle>
-                        <DialogContent>
-                            <DialogContentText>
-                                <Form
-                                    {...toJSONFormParams(schema[selectedCat])}
-                                    validator={validator}
-                                    onChange={e => console.log('changed', e)}
-                                    onSubmit={e => console.log('submitted', e)}
-                                    onError={e => console.log('errors', e)}
-                                />
-                            </DialogContentText>
-                        </DialogContent>
+        const Topbar = () => {
+            const [open, setOpen] = useState(false);
+            const handleClickOpen = () => setOpen(true);
+            const handleClose = (e, reason) => (reason === "backdropClick") ? null : setOpen(false);
 
-                    </Dialog>
-                </React.Fragment>
-            );
+            const AddModal = () => {
+                return (<Dialog open={open} onClose={handleClose} maxWidth={'lg'} fullWidth disableBackdropClick>
+                    <DialogTitle id="titulo-dialogo">
+                        <IconButton
+                            onClick={handleClose}
+                            sx={{ position: 'absolute', right: 8, top: 8, color: (theme) => theme.palette.grey[500] }}
+                            children={<Close />} />
+                    </DialogTitle>
+                    <DialogContent>
+                        <DialogContentText>
+                            <Form
+                                {...toJSONFormParams(schema[selectedCat])}
+                                validator={validator}
+                                onChange={e => console.log('changed', e)}
+                                onSubmit={e => console.log('submitted', e)}
+                                onError={e => console.log('errors', e)}
+                            />
+                        </DialogContentText>
+                    </DialogContent>
+                </Dialog>);
+            };
+
+            return <>
+                <AddModal />
+                <Grid container >
+                    <Grid item xs={10}>
+                        <Breadcrumbs sx={{ padding: '1rem' }}>
+                            <Link underline="hover" color="inherit" onClick={e => setSelectedRow(null)} children={selectedCat.toUpperCase()} />
+                            {selectedRow ? <Link underline="hover" color="inherit" children={`ID: ${selectedRow}`} /> : null}
+                        </Breadcrumbs>
+                    </Grid>
+                    {selectedRow ? null : <Grid item xs={2} sx={{ alignSelf: 'center', textAlignLast: 'end', paddingRight: '1rem' }}>
+                        <IconButton className="mb-3" variant="outlined" color='success' onClick={handleClickOpen} children={<Add />} />
+                        <IconButton className="mb-3" variant="outlined" color='info' onClick={handleClickOpen} children={<Refresh />} />
+                        <IconButton className="mb-3" variant="outlined" color='error' onClick={handleClickOpen} children={<Delete />} />
+                    </Grid>}
+                </Grid>
+            </>
         };
 
-        // const GridAction = (props) => {
-        //     const [anchorEl, setAnchorEl] = useState(null);
+        const Table = () => {
+            const getActionColumn = () => {
 
-        //     const handlePopoverOpen = (event) => {
-        //         setAnchorEl(event.currentTarget)
-        //     };
+                const ActionButton = (v) => {
 
-        //     const handlePopoverClose = () => {
-        //         setAnchorEl(null)
-        //     };
-        //     const { label, key, Icon } = props;
-        //     const open = Boolean(anchorEl);
-        //     return (
-        //         <Fragment key={key + label}>
-        //             <Icon aria-owns={open ? label : undefined}
-        //                 aria-haspopup="true"
-        //                 onMouseEnter={handlePopoverOpen}
-        //                 onMouseLeave={handlePopoverClose}> </Icon>
-        //             <Popover
-        //                 id={label}
-        //                 sx={{
-        //                     pointerEvents: 'none',
-        //                 }}
-        //                 open={open}
-        //                 anchorEl={anchorEl}
-        //                 anchorOrigin={{
-        //                     vertical: 'top',
-        //                     horizontal: 'right',
-        //                 }}
-        //                 transformOrigin={{
-        //                     vertical: 'bottom',
-        //                     horizontal: 'left',
-        //                 }}
-        //                 onClose={handlePopoverClose}
-        //                 disableRestoreFocus
-        //             >
-        //                 <Typography sx={{ p: 1 }}>{label}</Typography>
-        //             </Popover>
-        //         </Fragment>
-        //     )
-        // };
+                    const [anchorEl, setAnchorEl] = React.useState(null);
+                    const popperRef = useRef(null);
+                    const open = Boolean(anchorEl);
 
-        const getActionColumn = () => ({
-            field: 'actions',
-            headerName: 'Actions',
-            width: 200,
-            type: 'actions',
-            renderCell: v =>
-                <>
-                    <GridActionsCellItem
-                        key={getRowId(v) + '-verDetallesContratosGridAction'}
-                        color={'info'}
-                        onClick={e => { console.log(e) }}
-                        icon={<IconButton color='info' label={'Ver Detalles'} children={<Edit color='info' />} />}
-                    />
-                    <GridActionsCellItem
-                        key={getRowId(v) + '-verDetallesContratosGridAction'}
-                        color={'primary'}
-                        onClick={e => { console.log(e) }}
-                        icon={<IconButton color='primary' label={'Ver Detalles'} children={<Comment />} />}
-                    />
-                    <GridActionsCellItem
-                        key={getRowId(v) + '-verDetallesContratosGridAction'}
-                        color={'primary'}
-                        onClick={e => { console.log(e) }}
-                        icon={<IconButton color='primary' label={'Ver Detalles'} children={<AttachFile />} />}
-                    />
-                    <GridActionsCellItem
-                        key={getRowId(v) + '-verDetallesContratosGridAction'}
-                        color={'secondary'}
-                        onClick={e => { console.log(e) }}
-                        icon={<IconButton color='secondary' label={'Ver Detalles'} children={<History color='secondary' />} />}
-                    />
-                </>
-        });
+                    const handleClick = (event) => {
+                        setAnchorEl(anchorEl ? null : event.currentTarget);
+                    };
 
-        const columns = [...schema[selectedCat].map(x => {
-            const getFlexSize = (x) => {
-                if (x.datatype === 'boolean') return 40;
-                if (x.datatype === 'character varying') return 160;
-                if (x.datatype === 'integer') return 80;
-                if (x.datatype === 'timestamp with time zone') return 160;
-                return 150;
-            }
-            return {
-                field: x.name,
-                headerName: x.name,
-                flex: getFlexSize(x),
-                editable: true,
-                renderCell: (params) => {
-                    if (x.datatype === 'timestamp with time zone') return new Date(params.value).toLocaleString();
-                    if (x.datatype === 'boolean') return params.value ? <Check color='success' /> : <Close color='error' />;
-                    return params.value;
+                    const handleClickOutside = (event) => {
+                        if (popperRef.current && !popperRef.current.contains(event.target)) {
+                            setAnchorEl(null);
+                        }
+                    };
 
+                    useEffect(() => {
+                        // Agrega escuchador de clics al documento
+                        document.addEventListener('mousedown', handleClickOutside);
+                        return () => {
+                            // Limpia el escuchador al desmontar el componente
+                            document.removeEventListener('mousedown', handleClickOutside);
+                        };
+                    }, []);
+
+                    const canBeOpen = open && Boolean(anchorEl);
+                    const id = canBeOpen ? getRowId(v) + '-spring-popper' : undefined;
+
+                    return <div>
+                        <IconButton color='grey.700' label={'Ver Detalles'} children={<MoreHoriz />} onClick={handleClick} />
+                        <Popper id={id} open={open} ref={popperRef} anchorEl={anchorEl} transition>
+                            {({ TransitionProps }) => (
+                                <Fade {...TransitionProps}>
+                                    <Card sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}>
+                                        <CardContent>
+                                            <Typography sx={{ fontSize: 16 }} color="grey.700" gutterBottom>
+                                                Actions
+                                            </Typography>
+                                            <Divider />
+                                            <List>
+                                                <ListItem disablePadding>
+                                                    <Button variant="text" color='info' onClick={e => setSelectedRow(v.id)} endIcon={<Visibility />} children={'Details'} />
+                                                </ListItem>
+                                                <ListItem disablePadding>
+                                                    <Button variant="text" color='info' onClick={e => setSelectedRow(v.id)} endIcon={<Edit />} children={'Edition'} />
+                                                </ListItem>
+                                                <ListItem disablePadding>
+                                                    <Button variant="text" color='info' onClick={e => setSelectedRow(v.id)} endIcon={<AttachFile />} children={'Attachments'} />
+                                                </ListItem>
+                                                <ListItem disablePadding>
+                                                    <Button variant="text" color='info' onClick={e => setSelectedRow(v.id)} endIcon={<Comment />} children={'Comments'} />
+                                                </ListItem>
+                                                <ListItem disablePadding>
+                                                    <Button variant="text" color='info' onClick={e => setSelectedRow(v.id)} endIcon={<History />} children={'History'} />
+                                                </ListItem>
+                                            </List>
+                                        </CardContent>
+                                    </Card>
+                                </Fade>
+                            )}
+                        </Popper>
+                    </div >
                 }
-            }
-        }), getActionColumn()];
 
-        return (
+                return {
+                    field: 'actions',
+                    headerName: 'Actions',
+                    width: 100,
+                    type: 'actions',
+                    renderCell: ActionButton
+                }
+            };
 
-            <Box sx={{ position: 'relative', height: '100%', width: '100%', backgroundColor: 'white' }}>
-                <AddModal />
-                <Typography variant="h6" component="div" sx={{ padding: '1rem' }} children={selectedCat.toUpperCase()} />
-                <IconButton className="mb-3" variant="contained" color='success' onClick={handleClickOpen} children={<Add />} />
-                <IconButton className="mb-3" variant="contained" color='info' onClick={handleClickOpen} children={<Refresh />} />
-                <IconButton className="mb-3" variant="contained" color='error' onClick={handleClickOpen} children={<Delete />} />
+            const columns = [...schema[selectedCat].map(x => {
+                const getFlexSize = (x) => {
+                    if (x.datatype === 'boolean') return 40;
+                    if (x.datatype === 'character varying') return 160;
+                    if (x.datatype === 'integer') return 80;
+                    if (x.datatype === 'timestamp with time zone') return 160;
+                    return 150;
+                }
+                return {
+                    field: x.name,
+                    headerName: x.name,
+                    flex: getFlexSize(x),
+                    editable: true,
+                    renderCell: (params) => {
+                        if (x.datatype === 'timestamp with time zone') return new Date(params.value).toLocaleString();
+                        if (x.datatype === 'boolean') return params.value ? <Check color='success' /> : <Close color='error' />;
+                        return params.value;
+
+                    }
+                }
+            }), getActionColumn()];
+
+            return <Box sx={{ padding: '1rem', paddingTop: '0' }}>
                 <DataGrid
                     checkboxSelection
                     disableRowSelectionOnClick
@@ -273,12 +279,35 @@ const GenericCat = ({ selectedCat, auth }) => {
                     }}
                 />
             </Box>
+        };
+
+        const RowActions = () => {
+
+            const [value, setValue] = useState(0);
+            const handleChange = (event, newValue) => setValue(newValue);
+
+            return <Box sx={{ width: '100%' }}>
+                <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                    <Tabs value={value} onChange={handleChange} >
+                        <Tab label="Details" />
+                        <Tab label="Edition" />
+                        <Tab label="Attachments" />
+                        <Tab label="Comments" />
+                        <Tab label="History" />
+                    </Tabs>
+                </Box>
+            </Box>
+        };
+
+        return (
+            <Box sx={{ position: 'relative', height: '100%', width: '100%', backgroundColor: 'white' }}>
+                <Topbar />
+                {selectedRow ? <RowActions /> : <Table />}
+            </Box>
         );
     };
 
-    return (<div className="container">
-        <DataGridDemo />
-    </div>)
+    return <DataGridDemo />
 }
 
 // export default withAuthenticationRequired(Dashboard, { onRedirecting: () => <h1>Redirecting</h1> });

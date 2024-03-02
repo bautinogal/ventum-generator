@@ -12,18 +12,21 @@
             "type": "object",
             "properties": {
                 "users": {
+                    "title": "Users",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/user"
                     }
                 },
                 "rols": {
+                    "title": "Rols",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/rol"
                     }
                 },
                 "genericPermissions": {
+                    "title": "Generic Permissions",
                     "type": "array",
                     "x-static": true,
                     "items": {
@@ -31,18 +34,21 @@
                     }
                 },
                 "customPermissions": {
+                    "title": "Custom Permissions",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/customPermission"
                     }
                 },
                 "comments": {
+                    "title": "Comments",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/comment"
                     }
                 },
                 "files": {
+                    "title": "Files",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/file"
@@ -50,51 +56,77 @@
                 }
             }
         },
-        "style": {
-            "theme": {
-                "typography": {
-                    "fontFamily": "Montserrat, sans-serif",
-                    "fontSize": 14,
-                    "fontWeightLight": 300,
-                    "fontWeightRegular": 400,
-                    "fontWeightMedium": 500
+        "UI": {
+            "imports":[
+                "https://fonts.googleapis.com/css?family=Montserrat:300,400,500,600,700&display=swap"
+            ],
+            "style": {
+                "theme": {
+                    "typography": {
+                        "fontFamily": "Open Sans, sans-serif",
+                        "fontSize": 14,
+                        "fontWeightLight": 300,
+                        "fontWeightRegular": 400,
+                        "fontWeightMedium": 500
+                    },
+                    "palette": {
+                        "primary": {
+                            "main": "#DF8A0E",
+                            "light": "#FFBB3B",
+                            "dark": "#B37800",
+                            "contrastText": "#FFFFFF"
+                        },
+                        "secondary": {
+                            "main": "#994895",
+                            "light": "#CA75C0",
+                            "dark": "#672C5F",
+                            "contrastText": "#FFFFFF"
+                        },
+                        "info": {
+                            "main": "#0E99DF",
+                            "light": "#6AC0FF",
+                            "dark": "#0073AC",
+                            "contrastText": "#FFFFFF"
+                        },
+                        "success": {
+                            "main": "#4CAF50",
+                            "light": "#80E27E",
+                            "dark": "#087F23",
+                            "contrastText": "#FFFFFF"
+                        },
+                        "error": {
+                            "main": "#F44336",
+                            "light": "#FF7961",
+                            "dark": "#BA000D",
+                            "contrastText": "#FFFFFF"
+                        },
+                        "warning": {
+                            "main": "#FF9800",
+                            "light": "#FFC947",
+                            "dark": "#C66900",
+                            "contrastText": "#000000"
+                        }
+                    }
+                }
+            },
+            "categories": {
+                "users": {
+                    "title": "Usuarios",
+                    "icon": "Person",
+                    "type": "table",
+                    "params":{
+                        "table": "users"
+                    }
                 },
-                "palette": {
-                    "primary": {
-                        "main": "#DF8A0E",
-                        "light": "#FFBB3B",
-                        "dark": "#B37800",
-                        "contrastText": "#FFFFFF"
-                    },
-                    "secondary": {
-                        "main": "#994895",
-                        "light": "#CA75C0",
-                        "dark": "#672C5F",
-                        "contrastText": "#FFFFFF"
-                    },
-                    "info": {
-                        "main": "#0E99DF",
-                        "light": "#6AC0FF",
-                        "dark": "#0073AC",
-                        "contrastText": "#FFFFFF"
-                    },
-                    "success": {
-                        "main": "#4CAF50",
-                        "light": "#80E27E",
-                        "dark": "#087F23",
-                        "contrastText": "#FFFFFF"
-                    },
-                    "error": {
-                        "main": "#F44336",
-                        "light": "#FF7961",
-                        "dark": "#BA000D",
-                        "contrastText": "#FFFFFF"
-                    },
-                    "warning": {
-                        "main": "#FF9800",
-                        "light": "#FFC947",
-                        "dark": "#C66900",
-                        "contrastText": "#000000"
+                "rols": {
+                    "title": "Roles",
+                    "icon": "AdminPanelSettings",
+                    "type": "rolsAndPermissions",
+                    "params":{
+                        "usersTable": "users",
+                        "rolsTable": "rols",
+                        "genericPermissionsTable": "genericPermissions",
+                        "customPermissionsTable": "customPermissions"
                     }
                 }
             }
@@ -107,7 +139,8 @@
             "properties": {
                 "email": {
                     "type": "string",
-                    "format": "email"
+                    "format": "email",
+                    "x-important": true
                 },
                 "password": {
                     "type": "string",
@@ -117,11 +150,13 @@
                 },
                 "name": {
                     "type": "string",
-                    "maxLength": 64
+                    "maxLength": 64,
+                    "x-important": true
                 },
                 "lastName": {
                     "type": "string",
-                    "maxLength": 64
+                    "maxLength": 64,
+                    "x-important": true
                 },
                 "roles": {
                     "type": "array",
@@ -145,7 +180,8 @@
             "type": "object",
             "properties": {
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "x-important": true
                 },
                 "description": {
                     "type": "string"
@@ -177,7 +213,8 @@
             "x-static": true,
             "properties": {
                 "table": {
-                    "$ref": "#/definitions/tables"
+                    "$ref": "#/definitions/tables",
+                    "x-important": true
                 },
                 "action": {
                     "type": "string",
@@ -198,7 +235,8 @@
                         "readComments": "Read Comments",
                         "writeComments": "Write Comments",
                         "readHistory": "Read History"
-                    }
+                    },
+                    "x-important": true
                 },
                 "description": {
                     "type": "string"
@@ -215,7 +253,8 @@
             "x-static": true,
             "properties": {
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "x-important": true
                 },
                 "description": {
                     "type": "string"
@@ -230,7 +269,8 @@
             "type": "object",
             "properties": {
                 "text": {
-                    "type": "string"
+                    "type": "string",
+                    "x-important": true
                 },
                 "table": {
                     "type": "array",
@@ -253,7 +293,8 @@
             "type": "object",
             "properties": {
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "x-important": true
                 },
                 "url": {
                     "type": "string"
@@ -262,7 +303,8 @@
                     "type": "integer"
                 },
                 "type": {
-                    "type": "string"
+                    "type": "string",
+                    "x-important": true
                 },
                 "table": {
                     "type": "array",

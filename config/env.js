@@ -77,3 +77,4 @@ export default {
     saltWorkFactor: process.env.JWT_SWF || '10'
   },
 }
+

@@ -8,7 +8,7 @@ import fs from 'fs';
 import pkg from 'lodash';
 const { isEmpty } = pkg;
 import { info, warn, error } from '../log/index.js';
-const { prefix: cdcPrefix, id: cdcId, action: cdcAction, createdAt: cdcCreatedAt, lastChangesLimit: cdcLastChangesLimit } = env.tables.cdc;
+const { prefix: cdcPrefix, id: cdcId, action: cdcAction, editedAt: cdcEditedAt, lastChangesLimit: cdcLastChangesLimit } = env.tables.cdc;
 
 const notificationListeners = [];
 const createHash = (str) => crypto.createHash('sha256').update(str).digest('hex');
@@ -30,6 +30,20 @@ const init = async () => {
         return pool;
     })();
     const schema = await (async () => {
+
+        const removeDuplicatedCols = (table) => {
+            return table.reduce((p, c) => {
+                let col = p.find(x => x.name === c.name);
+                if (col) {
+                    col.pk = col.pk || c.pk;
+                    col.fk = col.fk || c.fk;
+                } else {
+                    p.push(c);
+                }
+                return p;
+            }, []);
+        }
+
         const tableInfoQuery = `SELECT 
         c.column_name AS name,
         c.data_type AS dataType,
@@ -70,6 +84,7 @@ const init = async () => {
                 pk: c.pk === 'YES',
                 fk: c.fk === 'YES'
             }));
+            schema[tableName] = removeDuplicatedCols(schema[tableName]);
         };
         return schema;
     })();
@@ -119,7 +134,7 @@ const init = async () => {
                     newRows.forEach(data => {
                         const action = 'INSERT';
                         const { rows, indexed, cdc, pks, schema } = table;
-                        const { [cdcId]: cdc_id, [cdcAction]: rowAction, [cdcCreatedAt]: created_at, ...r } = data;
+                        const { [cdcId]: cdc_id, [cdcAction]: rowAction, [cdcEditedAt]: created_at, ...r } = data;
                         const key = pks.reduce((p, k) => p + '-' + r[k], '').slice(1);
                         table.cdc.keys[key] ??= [];
                         switch (action) {
@@ -148,9 +163,9 @@ const init = async () => {
                             default:
                                 throw new Error(`UPDATE-CACHE-WITH-CDC Invalid Action: ${action}`);
                         }
-                        table.cdc.keys[key].push({ cdc_id, [cdcAction]: rowAction, [cdcCreatedAt]: created_at, data: r });
+                        table.cdc.keys[key].push({ cdc_id, [cdcAction]: rowAction, [cdcEditedAt]: created_at, data: r });
                         table.cdc.count++;
-                        table.lastChanges.push({ cdc_id, [cdcAction]: rowAction, [cdcCreatedAt]: created_at, data: r, hash: createHash(JSON.stringify(data)) });
+                        table.lastChanges.push({ cdc_id, [cdcAction]: rowAction, [cdcEditedAt]: created_at, data: r, hash: createHash(JSON.stringify(data)) });
                         table.lastChanges = table.lastChanges.slice(-cdcLastChangesLimit);
                     });
                 };
@@ -185,7 +200,7 @@ const init = async () => {
 
                 const updateCacheWithCDC = ({ table, action, data }) => {
                     const { rows, indexed, cdc, pks, schema } = table;
-                    const { [cdcId]: cdc_id, [cdcAction]: rowAction, [cdcCreatedAt]: created_at, ...r } = data;
+                    const { [cdcId]: cdc_id, [cdcAction]: rowAction, [cdcEditedAt]: created_at, ...r } = data;
                     const key = pks.reduce((p, k) => p + '-' + r[k], '').slice(1);
                     table.cdc.keys[key] ??= [];
                     switch (action) {
@@ -214,9 +229,9 @@ const init = async () => {
                         default:
                             throw new Error(`UPDATE-CACHE-WITH-CDC Invalid Action: ${action}`);
                     }
-                    table.cdc.keys[key].push({ cdc_id, [cdcAction]: rowAction, [cdcCreatedAt]: created_at, data: r });
+                    table.cdc.keys[key].push({ cdc_id, [cdcAction]: rowAction, [cdcEditedAt]: created_at, data: r });
                     table.cdc.count++;
-                    table.lastChanges.push({ cdc_id, [cdcAction]: rowAction, [cdcCreatedAt]: created_at, data: r, hash: createHash(JSON.stringify(data)) });
+                    table.lastChanges.push({ cdc_id, [cdcAction]: rowAction, [cdcEditedAt]: created_at, data: r, hash: createHash(JSON.stringify(data)) });
                     table.lastChanges = table.lastChanges.slice(-cdcLastChangesLimit);
                 };
 
@@ -326,8 +341,8 @@ const init = async () => {
                     cache[tableName].cdc.keys = pks?.length !== 0 ? indexArraysBy(cdcRows, pks) : warn(` * Table CDC ${tableName} (${cache[cdcPrefix + tableName].rows?.length}) has NO PRIMARY KEYS!`);
                     cache[tableName].cdc.rows = cdcRows;
                     cache[tableName].lastChanges = cdcRows.slice(-cdcLastChangesLimit).sort((a, b) => a[cdcId] - b[cdcId]).map(r => {
-                        const { [cdcId]: cdc_id, [cdcAction]: action, [cdcCreatedAt]: created_at, ...data } = r;
-                        return { [cdcId]: r[cdcId], [cdcAction]: r[cdcAction], [cdcCreatedAt]: r[cdcCreatedAt], data, hash: createHash(JSON.stringify(r)) };
+                        const { [cdcId]: cdc_id, [cdcAction]: action, [cdcEditedAt]: created_at, ...data } = r;
+                        return { [cdcId]: r[cdcId], [cdcAction]: r[cdcAction], [cdcEditedAt]: r[cdcEditedAt], data, hash: createHash(JSON.stringify(r)) };
                     });
                 } else {
                     cache[tableName].rows = tablesRows[tableName];
@@ -341,7 +356,7 @@ const init = async () => {
 
             const checkKey = (tableName, actualRow, cdcRows) => {
                 const cdcRow = cdcRows.sort((a, b) => a[cdcId] - b[cdcId]).reduce((p, x, i) => {
-                    const { [cdcId]: cdc_id, [cdcAction]: action, [cdcCreatedAt]: created_at, ...data } = x;
+                    const { [cdcId]: cdc_id, [cdcAction]: action, [cdcEditedAt]: created_at, ...data } = x;
 
                     switch (action.toUpperCase()) {
                         case 'INITIAL':
@@ -706,30 +721,6 @@ export default { schema, schemasHash, getCache, query, getRows, getRow, getPagin
 //         }
 //     }
 // };
-
-let filters = {
-    "pageNo": 0,
-    "pageSize": 10,
-    "order": [
-        {
-            "column": "id",
-            "type": "desc",
-        }
-    ],
-    "filter": {
-        "column": "sector",
-        "condition": "equals",
-        "value": 3,
-        "conditional": {
-            "logicOperator": "or",
-            "filter": {
-                "column": "nombre",
-                "condition": "equals",
-                "value": 2,
-            }
-        }
-    }
-};
 
 // let cache = {
 //     "table_name": {

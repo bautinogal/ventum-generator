@@ -8,7 +8,8 @@ const __dirname = path.dirname(__filename);
 export const generate = async (schema, tables) => {
 
     const replace = {
-        envBack: fs.readFileSync(path.join(__dirname, '../../config/.env'), 'utf8'),
+        envBack: fs.existsSync(path.join(__dirname, '../../config/.env')) ?
+            fs.readFileSync(path.join(__dirname, '../../config/.env'), 'utf8') : '',
         envjsBack: `{
             admin: {
                 email: process.env.APP_ADMIN_EMAIL || 'admin@admin',
