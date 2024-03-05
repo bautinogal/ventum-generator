@@ -2,7 +2,7 @@ import { log, crypto } from '../lib/index.js';
 import env from '../config/env.js';
 import express from 'express';
 import cors from 'cors';
-import serveIndex from 'serve-index';
+import { getRow, getRows } from '../lib/tables/index.js';
 import cookieParser from 'cookie-parser'; // Herramienta para parsear las cookies
 import bodyParser from 'body-parser'; // Herramienta para parsear el "cuerpo" de los requests
 import path from 'path';
@@ -70,83 +70,60 @@ export const before = (app) => {
     next();
   };
 
-  const getAuth = async (req, res, next) => {
-
-    const getPersonaId = async (auth) => {
-      let personaId = null;
-      try {
-        personaId = (await sql.get('Personas', p => p.email === auth.jwt.payload.email))[0]?.personaId || null;
-      } catch (e) {
-        log.error(`Error getting auth 'Persona': ` + e.message);
-        personaId = null;
-      }
-      auth.personaId = personaId;
-      return auth;
-    };
-
-    const getRoles = async (auth) => {
-      let roles = null;
-      if (auth.personaId) {
-        try {
-          const rolesTable = await sql.get('Roles');
-          const rolesPersonaMap = await sql.get('PersonasRolesMap', prm => prm.personaId === auth.personaId);
-          roles = rolesPersonaMap.map(r => rolesTable.find(rol => rol.rolId === r.rolId)).map(r => r.nombre);
-        } catch (e) {
-          log.error(`Error getting roles 'Persona': ` + e.message);
-          roles = null;
-        }
-      }
-      auth.roles = roles;
-      return auth;
-    };
-
-    const getPermisos = async (auth) => {
-      let permisos = null;
-      if (Array.isArray(auth.roles)) {
-        try {
-          permisos = [];
-          const rolesTable = await sql.get('Roles');
-          const permisosTable = await sql.get('Permisos');
-          const permisosRolesMapTable = await sql.get('PermisosRolesMap');
-
-          const rolsIds = rolesTable.filter(rol => auth.roles.includes(rol.nombre)).map(r => r.rolId);
-          rolsIds.forEach(rolId => {
-            const permisosIds = permisosRolesMapTable.filter(prm => prm.rolId === rolId).map(prm => prm.permisoId);
-            const permisosNames = permisosTable.filter(p => permisosIds.includes(p.permisoId)).map(p => p.nombre);
-            permisos = [...permisos, ...permisosNames]
-          });
-        } catch (e) {
-          log.error(`Error getting roles 'Persona': ` + e.message);
-          permisos = null;
-        }
-      }
-      auth.permisos = permisos;
-      return auth;
-    };
-
-    const authHeader = req.headers['authorization'];
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      let auth = { jwt: {} };
-      auth.jwt.raw = authHeader.split('Bearer ')[1];
-      try {
-        let decodedJWT = crypto.verifyJWT(auth.jwt.raw);
-        auth.jwt = { ...auth.jwt, ...decodedJWT, valid: true };
-      }
-      catch (error) {
-        log.warn(`Error with auth JWT: ${error.message}`);
-        auth.jwt.valid = false;
-      }
-      if (auth.jwt.valid) {
-        auth = await getPersonaId(auth);
-        auth = await getRoles(auth);
-        auth = await getPermisos(auth);
-      }
-      req.auth = auth;
-    }
-    next();
-  };
-
   const addReqData = async (req, res, next) => {
+
+    const getAuth = async () => {
+
+      const getData = async (auth) => {
+        //const user = await getRow('users', { email, password: await crypto.hash(password) });
+        const user = { ...await getRow('users', { id: auth.jwt.decodedJWT.payload.id }) };
+        if (user) {
+          delete user.password;
+          const rolIds = (await getRows('usersRolsMap', { userId: user.id })).map(x => x.rolId);
+          const rols = await getRows('rols', rol => rolIds.includes(rol.id));
+          const customPermissionsIds = Array.from(new Set((await getRows('rolsCustomPermissionsMap',
+            row => rolIds.includes(row.rolId))).map(x => x.customPermissionId)));
+          const genericPermissionsIds = Array.from(new Set((await getRows('rolsGenericPermissionsMap',
+            row => rolIds.includes(row.rolId))).map(x => x.genericPermissionId)));
+          const customPermissions = await getRows('customPermissions', row => customPermissionsIds.includes(row.id));
+          const genericPermissions = await getRows('genericPermissions', row => genericPermissionsIds.includes(row.id));
+
+          auth.user = user;
+          auth.rols = rols;
+          auth.customPermissions = customPermissions;
+          auth.genericPermissions = genericPermissions;
+        };
+        return auth;
+      };
+
+      let auth = null;
+      const authHeader = req.headers['authorization'];
+      if (authHeader?.startsWith('Bearer ')) {
+        auth = {
+          jwt: {
+            raw: authHeader.split('Bearer ')[1],
+          }
+        };
+        try {
+          auth.jwt.decodedJWT = crypto.verifyJWT(auth.jwt.raw);
+          if (auth.jwt.decodedJWT?.payload?.expiration == null) throw new Error('Token without expiration');
+          if (auth.jwt.decodedJWT?.payload?.expiration < Date.now()) throw new Error('Token expired');
+          auth.jwt.valid = true;
+        } catch (error) {
+          log.error(`Error with auth JWT: ${error.message}`);
+          auth.jwt.valid = false;
+          auth.jwt.error = error.message;
+        }
+
+        if (auth.jwt.valid) {
+          auth = await getData(auth);
+        }
+      }
+
+      return auth;
+    };
+
+    req.auth = await getAuth();
     req.start = Date.now();
     req.uuid = v4();
     next();
@@ -154,7 +131,6 @@ export const before = (app) => {
 
   app = addMiddleware(app);
   app.use(addUtils);
-  app.use(getAuth);
   app.use(addReqData);
 
   return app;
@@ -163,10 +139,11 @@ export const before = (app) => {
 export const after = (app) => {
 
   const refreshAuth = (req, res, next) => {
-    if (req.auth && req.auth.valid) {
+    const oldAuth = req.auth?.jwt;
+    if (oldAuth?.valid) {
       const auth = crypto.createJWT({
-        userId: req.auth.payload.userId,
-        expiration: Date.now() + env.dfltExpiration,
+        id: oldAuth?.decodedJWT?.payload?.id,
+        expiration: Date.now() + env.jwt.dfltExpiration,
       });
       res.set("auth", auth);
     }
@@ -196,7 +173,7 @@ export const after = (app) => {
     //Document with request info that will be stored at the DB
     const getRequestData = async (req) => {
       var result = {
-        url: req.protocol + "://" + req.get('host') + req.originalUrl,
+        //url: req.protocol + "://" + req.get('host') + req.originalUrl,
         ip: req.headers['x-forwarded-for'] || req.connection.remoteAddress,
         auth: req.auth,
         ts: Date.now(),
@@ -219,6 +196,7 @@ export const after = (app) => {
     const logRequest = async (data) => {
 
       function getDateTimeWithMilliseconds(ts) {
+        if (ts == null) return null;
         const date = new Date(ts);
         const milliseconds = date.getMilliseconds();
         const dateTimeWithoutMilliseconds = date.toLocaleString('en-GB', { timeZone: 'UTC' });
@@ -230,44 +208,43 @@ export const after = (app) => {
         return dateTimeWithMilliseconds;
       }
 
-      const logOptions = env.middleware.log.req;
+      const reqLogOptions = env.middleware.log.req;
+      const resLogOptions = env.middleware.log.res;
 
-      let logStr = `\x1b[35m>>\x1b[0m\x1b[32m HTTP\x1b[0m \x1b[36m${data.method}\x1b[0m \x1b[33m${data.url}\x1b[0m ${data.hash}\x1b[0m`
+      let logStr = `\x1b[35m>>\x1b[0m\x1b[32m HTTP\x1b[0m \x1b[36m${data.method}\x1b[0m \x1b[33m${data.url}\x1b[0m ${req.end - req.start}ms ${data.hash}\x1b[0m`
 
       //RESQUEST
-      if (eval(logOptions.req)) {
+      if (eval(reqLogOptions.req)) {
         logStr += (`
 \x1b[35mREQ\x1b[0m from \x1b[33m${data.ip}\x1b[0m at ${getDateTimeWithMilliseconds(req.start)} (UTC)\x1b[0m`);
-        if (eval(logOptions.headers)) logStr += (` 
-  Headers: ${JSON.stringify(data.headers, null, 2)}`);
-        if (logOptions?.auth === 'oneline') logStr += (`
-  Auth: ${JSON.stringify({ valid: data?.auth?.jwt.valid, id: data?.auth?.personaId, email: data?.auth?.jwt?.payload.email, roles: data?.auth?.roles })}`);
-        else if (eval(logOptions.auth)) logStr += (`
-  Auth: ${JSON.stringify(data.auth, null, 2)}`);
-        if (logOptions?.body === 'oneline') logStr += (`
+        if (eval(reqLogOptions?.headers)) logStr += (` 
+  Headers: ${JSON.stringify(data.headers, null, 4)}`);
+        if (reqLogOptions?.auth === 'oneline') logStr += (`
+  Auth: ${JSON.stringify({ valid: data?.auth?.jwt.valid, expiration: getDateTimeWithMilliseconds(data?.auth?.jwt?.decodedJWT?.payload?.expiration), id: data?.auth?.jwt?.decodedJWT?.payload?.id, email: data?.auth?.user?.email, rols: data?.auth?.rols?.map(x => x.name) })}`);
+        else if (eval(reqLogOptions.auth)) logStr += (`
+  Auth: ${JSON.stringify(data.auth, null, 4)}`);
+        if (reqLogOptions?.body === 'oneline') logStr += (`
   Body: ${reqBody?.substring(0, 80)}${reqBody && reqBody.length > 80 ? '...' : ''} (Length ${reqBody?.length})`);
-        else if (eval(logOptions.body)) logStr += (`
-  Body: ${Array.isArray(data.body) ? limitedArrStr(data.body, 5) : JSON.stringify(data.body, null, 2)}`);
+        else if (eval(reqLogOptions.body)) logStr += (`
+  Body: ${Array.isArray(data.body) ? limitedArrStr(data.body, 5) : JSON.stringify(data.body, null, 4)}`);
       }
-
       //RESPONSE
-      if (eval(logOptions.res) || true) {
+      if (eval(resLogOptions?.res) || true) {
         logStr += (`
 \x1b[35mRES\x1b[0m code \x1b[32m${res.statusCode} \x1b[0m${getDateTimeWithMilliseconds(req.end)} (UTC)\x1b[0m`);
-        if (eval(logOptions.headers)) logStr += (` 
-  Headers: ${JSON.stringify(res.getHeaders(), null, 2)}`);
-        if (logOptions?.auth === 'oneline') logStr += (`
+        if (eval(resLogOptions?.headers)) logStr += (` 
+  Headers: ${JSON.stringify(res.getHeaders(), null, 4)}`);
+        if (resLogOptions?.auth === 'oneline') logStr += (`
   Auth: ${JSON.stringify({ valid: res?.auth?.jwt?.valid, id: res?.auth?.personaId, email: res?.auth?.jwt?.payload.email, roles: res?.auth?.roles })}`);
-        else if (eval(logOptions.auth)) logStr += (`
+        else if (eval(resLogOptions?.auth)) logStr += (`
   Auth: ${JSON.stringify(res.auth, null, 2)}`);
-        if (logOptions?.body === 'oneline') logStr += (`
+        if (resLogOptions?.body === 'oneline') logStr += (`
   Body: ${resBody?.substring(0, 80)}${resBody && resBody.length > 80 ? '...' : ''} (Length ${resBody?.length})`);
-        else if (eval(logOptions.body)) logStr += (`
-  Body: ${Array.isArray(res.body) ? limitedArrStr(res.body, 5) : JSON.stringify(res.body, null, 2)}`);
+        else if (eval(resLogOptions?.body)) logStr += (`
+  Body: ${Array.isArray(res.body) ? limitedArrStr(res.body, 5) : JSON.stringify(res.body, null, 4)}`);
       }
 
-      log.info(`${logStr}
-      `);
+      log.info(`${logStr}\n`);
     };
 
     let reqData = await getRequestData(req);
@@ -275,38 +252,9 @@ export const after = (app) => {
     next();
   };
 
-  const logRes = async (req, res, next) => {
-    // console.log('logRes', res.body);
-    const logOptions = env.middleware.log.res;
-    const bodyStr = JSON.stringify(res.body);
-    try {
-      if (eval(logOptions.res)) {
-        let logStr = `UTC: ${(new Date()).toLocaleString('en-GB', { timeZone: 'UTC' })} -- Req: ${req.hash}
-\x1b[35mREQ <<\x1b[0m \x1b[32m${res.statusCode} \x1b[0m (\x1b[32mHTTP\x1b[0m \x1b[36m${req.method}\x1b[0m at \x1b[33m${req.url}\x1b[0m from \x1b[33m${req.ip}\x1b[0m)`;
-        if (eval(logOptions.headers)) logStr += (` 
-Headers: ${JSON.stringify(res.getHeaders(), null, 2)}`);
-        if (logOptions?.body === 'oneline') logStr += (`
-Body: ${bodyStr?.substring(0, 80)}${bodyStr && bodyStr.length > 80 ? '...' : ''} (Length ${bodyStr?.length})`);
-        else if (eval(logOptions.body)) logStr += (`
-Body: ${Array.isArray(res.body) ? limitedArrStr(res.body, 5) : JSON.stringify(res.body, null, 2)}`);
-        if (logOptions?.auth === 'oneline') logStr += (`
-Auth: ${JSON.stringify({ valid: res?.auth?.jwt?.valid, id: res?.auth?.personaId, email: res?.auth?.jwt?.payload.email, roles: res?.auth?.roles })}`);
-        else if (eval(logOptions.auth)) logStr += (`
-Auth: ${JSON.stringify(res.auth, null, 2)}`);
-
-        log.info(`${logStr}
-`);
-        //log.info(`\x1b[35m<<\x1b[0m \x1b[32m${res.statusCode} \x1b[0m (\x1b[32mHTTP\x1b[0m \x1b[36m${req.method}\x1b[0m at \x1b[33m${req.url}\x1b[0m from \x1b[33m${req.ip}\x1b[0m)`);
-      }
-    } catch (error) {
-      log.error(error); // TODO: Improve this logs
-    }
-  };
-
   app.use(refreshAuth);
   app.use(errorHandler);
   app.use(respond);
   app.use(logReq);
-  // app.use(logRes);
   return app;
 };

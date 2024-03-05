@@ -3,7 +3,6 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 const JWTKey = env.jwt.secret;
-console.log(typeof env.jwt.saltWorkFactor)
 const swf = bcrypt.genSaltSync(env.jwt.saltWorkFactor);
 
 //----------------------------------- HASH -------------------------------------------

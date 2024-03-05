@@ -73,6 +73,7 @@ export default {
     }
   },
   jwt: {
+    duration: parseInt(process.env.JWT_DURATION || '600000'),
     secret: process.env.JWT_SECRET || 'secret',
     saltWorkFactor: parseInt(process.env.JWT_SWF || '10')
   },

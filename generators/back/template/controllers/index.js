@@ -54,8 +54,9 @@ export default build([
         const customPermissions = await getRows('customPermissions', row => customPermissionsIds.includes(row.id));
         const genericPermissions = await getRows('genericPermissions', row => genericPermissionsIds.includes(row.id));
 
-        res.headers = { auth: crypto.createJWT({ id: user.id, expiration: Date.now() + env.dfltExpiration }) };
-        res.body = { user, rols, customPermissions, genericPermissions };
+        const jwt = crypto.createJWT({ id: user.id, expiration: Date.now() + env.jwt.duration });
+        res.headers = { auth: jwt };
+        res.body = { user, rols, customPermissions, genericPermissions, jwt };
       }
     }
   },

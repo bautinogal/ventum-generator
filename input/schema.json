@@ -124,7 +124,7 @@
                     "icon": "AdminPanelSettings",
                     "type": "grid",
                     "params": {
-                        "table": "users"
+                        "table": "rols"
                     }
                 }
             }
