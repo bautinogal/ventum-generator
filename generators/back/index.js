@@ -59,8 +59,28 @@ export const generate = async (schema, tables) => {
             },
             jwt: {
                 secret: process.env.JWT_SECRET || 'secret',
-                saltWorkFactor: process.env.JWT_SWF || '10'
+                saltWorkFactor: parseInt(process.env.JWT_SWF || '10')
             },
+            middleware: {
+                log: {
+                  req: {
+                    req: process.env.MIDDLEWARE_LOG_REQ_REQ || true,
+                    ip: process.env.MIDDLEWARE_LOG_REQ_IP || true,
+                    url: process.env.MIDDLEWARE_LOG_REQ_URL || true,
+                    method: process.env.MIDDLEWARE_LOG_REQ_METHOD || true,
+                    query: process.env.MIDDLEWARE_LOG_REQ_QUERY || true,
+                    headers: process.env.MIDDLEWARE_LOG_REQ_HEADERS || false,
+                    body: process.env.MIDDLEWARE_LOG_REQ_BODY || 'oneline',
+                    auth: process.env.MIDDLEWARE_LOG_REQ_AUTH || 'oneline',
+                  },
+                  res: {
+                    res: process.env.MIDDLEWARE_LOG_RES_RES || true,
+                    headers: process.env.MIDDLEWARE_LOG_RES_HEADERS || false,
+                    body: process.env.MIDDLEWARE_LOG_RES_BODY || 'oneline',
+                    auth: process.env.MIDDLEWARE_LOG_RES_AUTH || false,
+                  }
+                },
+              }
         }`,
     };
 

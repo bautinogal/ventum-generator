@@ -144,8 +144,44 @@ export const before = (app) => {
     next();
   };
 
-  const logReq = async (req, res, next) => {
+  app = addMiddleware(app);
+  app.use(addUtils);
+  app.use(getAuth);
+  //app.use(logReq);
 
+  return app;
+};
+
+export const after = (app) => {
+
+  const refreshAuth = (req, res, next) => {
+    if (req.auth && req.auth.valid) {
+      const auth = crypto.createJWT({
+        userId: req.auth.payload.userId,
+        expiration: Date.now() + env.dfltExpiration,
+      });
+      res.set("auth", auth);
+    }
+    next();
+  };
+
+  const errorHandler = (err, req, res, next) => {
+
+    console.log('errorHandler', err.stack);
+    res.code = 500;
+    res.message = null;
+    res.error = err.stack;
+    log.error(err);
+    next();
+  };
+
+  const respond = (req, res, next) => {
+   // console.log('respond', res.body);
+    res.send(res.body);
+    next();
+  };
+
+  const logReq = async (req, res, next) => {
     const bodyStr = JSON.stringify(req.body);
     //Document with request info that will be stored at the DB
     const getRequestData = async (req) => {
@@ -196,46 +232,11 @@ Auth: ${JSON.stringify(data.auth, null, 2)}`);
     next();
   };
 
-  app = addMiddleware(app);
-  app.use(addUtils);
-  //app.use(getAuth);
-  //app.use(logReq);
-
-  return app;
-};
-
-export const after = (app) => {
-
-  const refreshAuth = (req, res, next) => {
-    if (req.auth && req.auth.valid) {
-      const auth = crypto.createJWT({
-        userId: req.auth.payload.userId,
-        expiration: Date.now() + env.dfltExpiration,
-      });
-      res.set("auth", auth);
-    }
-    next();
-  };
-
-  const errorHandler = (err, req, res, next) => {
-    res.code = 500;
-    res.message = null;
-    res.error = err.stack;
-    log.error(err);
-    next();
-  };
-
-  const respond = (req, res, next) => {
-    res.send(res.body);
-    next();
-  };
-
   const logRes = async (req, res, next) => {
+    // console.log('logRes', res.body);
     const logOptions = env.middleware.log.res;
     const bodyStr = JSON.stringify(res.body);
     try {
-
-
       if (eval(logOptions.res)) {
         let logStr = `UTC: ${(new Date()).toLocaleString('en-GB', { timeZone: 'UTC' })} -- Req: ${req.hash}
 \x1b[35mREQ <<\x1b[0m \x1b[32m${res.statusCode} \x1b[0m (\x1b[32mHTTP\x1b[0m \x1b[36m${req.method}\x1b[0m at \x1b[33m${req.url}\x1b[0m from \x1b[33m${req.ip}\x1b[0m)`;
@@ -255,34 +256,15 @@ Auth: ${JSON.stringify(res.auth, null, 2)}`);
 `);
         //log.info(`\x1b[35m<<\x1b[0m \x1b[32m${res.statusCode} \x1b[0m (\x1b[32mHTTP\x1b[0m \x1b[36m${req.method}\x1b[0m at \x1b[33m${req.url}\x1b[0m from \x1b[33m${req.ip}\x1b[0m)`);
       }
-      // if (eval(logOptions.headers))
-      //   log.debug(` Headers: ${JSON.stringify(res.getHeaders(), null, 2)}`);
-      // if (eval(logOptions.body))
-      //   log.debug(` Body: ${Array.isArray(res.body) ? limitedArrStr(res.body, 5) : JSON.stringify(res.body, null, 2)}`);
-      // if (eval(logOptions.auth))
-      //   log.debug(` Auth: ${JSON.stringify(res.auth, null, 2)}`);
-
-      // await mongo.update("requestsDB", "requests", {
-      //   _id: req.reqId
-      // }, {
-      //   $set: {
-      //     res: {
-      //       code: res.code,
-      //       body: res.body,
-      //       headers: res.headers,
-      //       auth: res.auth,
-      //       error: res.error
-      //     }
-      //   }
-      // });
     } catch (error) {
       log.error(error); // TODO: Improve this logs
     }
   };
 
- // app.use(refreshAuth);
+  app.use(refreshAuth);
   app.use(errorHandler);
   app.use(respond);
- // app.use(logRes);
+  app.use(logReq);
+  app.use(logRes);
   return app;
 };

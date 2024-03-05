@@ -6,6 +6,7 @@ import http from '../../lib/http/index.js';
 export const getData = createAsyncThunk(
   'GET_DASHBOARD_DATA',
   async (payload, thunkAPI) => ({
+    tablesSchema: (await http.get('/api/tables-schema')).body,
     schema: (await http.get('/api/schema')).body,
     //user: await http.get('/api/user'),
   }),
@@ -34,7 +35,7 @@ const dashboardSlice = createSlice({
     [getData.rejected]: (state, action) => ({ ...state, fetching: state.fetching - 1 }),
     [getData.fulfilled]: (state, action) => ({
       ...state, data: action.payload,
-      selectedCat: Object.keys(action.payload.schema)[0], fetching: state.fetching - 1
+      selectedCat: Object.keys(action.payload.tablesSchema)[0], fetching: state.fetching - 1
     }),
 
   },

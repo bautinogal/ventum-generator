@@ -1,50 +1,118 @@
 import env from '../config/env.js';
-import express from 'express';
-import path from 'path';
-import { log, utils as u } from '../lib/index.js';
-import { testAuth, testQuery, testBody, testParams } from './helpers.js';
+import fs from 'fs';
+import { log, utils as u, crypto } from '../lib/index.js';
+import { build } from './builder.js';
 
-const router = express.Router();
+import path from 'path';
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-import { schema, schemasHash, getCache, query, getRows, getRow, getPaginatedRows, getRowCDC, postRow, editRow, delRow, addListener, removeListener } from '../lib/tables/index.js';
 
-router.get('/api/authenticate', async (req, res, next) => {
-  const start = Date.now();
-  let r = schema;
-  console.log(`/api/schema ${req.query.q} Time ${Date.now() - start}ms`)
-  res.send(r);
-});
-router.get('/api/schema', async (req, res, next) => {
-  const start = Date.now();
-  let r = schema;
-  console.log(`/api/schema ${req.query.q} Time ${Date.now() - start}ms`)
-  res.send(r);
-});
-router.get('/api/:tableName/rows', async (req, res, next) => {
-  const start = Date.now();
-  let r = req?.query?.q ? await getPaginatedRows(req.params.tableName, req.query.q) : await getRows(req.params.tableName);
-  console.log(`/api/${req.params.tableName}/rows ${req.query.q} Time ${Date.now() - start}ms`)
-  res.send(r);
-});
-router.get('/api/:tableName/row/:where', async (req, res, next) => {
-  const start = Date.now();
-  const r = await getRow(req.params.tableName, JSON.parse(req.params.where));
-  console.log(`/api/${req.params.tableName}/row/${req.params.where} Time ${Date.now() - start}ms`)
-  res.send({ r });
-});
-router.get('/api/:tableName/history/:where', async (req, res, next) => {
-  const start = Date.now();
-  const r = await getRowCDC(req.params.tableName, JSON.parse(req.params.where));
-  console.log(`/api/${req.params.tableName}/rows/history/${req.params.where} Time ${Date.now() - start}ms`)
-  res.send(r);
-});
-router.get('/api/:tableName', async (req, res, next) => {
-  const start = Date.now();
-  const r = (await getCache())[req.params.tableName];
-  console.log(`/api/${req.params.tableName} Time ${Date.now() - start}ms`)
-  res.send(r);
-});
+import {
+  schema as tablesSchema, schemasHash, getCache, query, getRows, getRow, getPaginatedRows, getRowCDC,
+  postRow, editRow, delRow, addListener, removeListener
+} from '../lib/tables/index.js';
 
-export default router;
+let schema = fs.readFileSync(path.join(__dirname, '../../schema.json'), 'utf8');
+
+
+export default build([
+  {
+    route: '/api/authenticate',
+    description: 'Authenticate user by email and password, returns JWT, rols and permissions.',
+    method: 'post',
+    validations: {
+      auth: null,
+      query: null,
+      body: {
+        type: "object",
+        properties: {
+          email: { type: "string" },
+          password: { type: "string" },
+        },
+        required: ["email", "password"],
+        additionalProperties: false,
+      },
+      params: null
+    },
+    action: async (req, res) => {
+      const { email, password } = req.body;
+      //const user = await getRow('users', { email, password: await crypto.hash(password) });
+      const user = { ...await getRow('users', { email, password }) };
+      if (!user) {
+        res.status(401);
+        res.body = { error: 'Invalid email or password' };
+      } else {
+        delete user.password;
+        const rolIds = (await getRows('usersRolsMap', { userId: user.id })).map(x => x.rolId);
+        const rols = await getRows('rols', rol => rolIds.includes(rol.id));
+        //const rolIds = rols.map(row => row.rolId);
+        const customPermissionsIds = Array.from(new Set((await getRows('rolsCustomPermissionsMap',
+          row => rolIds.includes(row.rolId))).map(x => x.customPermissionId)));
+        const genericPermissionsIds = Array.from(new Set((await getRows('rolsGenericPermissionsMap',
+          row => rolIds.includes(row.rolId))).map(x => x.genericPermissionId)));
+        const customPermissions = await getRows('customPermissions', row => customPermissionsIds.includes(row.id));
+        const genericPermissions = await getRows('genericPermissions', row => genericPermissionsIds.includes(row.id));
+
+        res.headers = { auth: crypto.createJWT({ id: user.id, expiration: Date.now() + env.dfltExpiration }) };
+        res.body = { user, rols, customPermissions, genericPermissions };
+      }
+    }
+  },
+  {
+    route: '/api/tables-schema',
+    description: 'Authenticate user by email and password, returns JWT, rols and permissions.',
+    method: 'get',
+    validations: {},
+    action: async (req, res) => {
+      res.body = tablesSchema;
+    }
+  },
+  {
+    route: '/api/schema',
+    description: 'Authenticate user by email and password, returns JWT, rols and permissions.',
+    method: 'get',
+    validations: {},
+    action: async (req, res) => {
+      res.body = schema;
+    }
+  },
+  {
+    route: '/api/tables/:tableName/rows',
+    description: 'Authenticate user by email and password, returns JWT, rols and permissions.',
+    method: 'get',
+    validations: {},
+    action: async (req, res) => {
+      res.body = req?.query?.q ?
+        await getPaginatedRows(req.params.tableName, req.query.q) :
+        await getRows(req.params.tableName);
+    }
+  },
+  {
+    route: '/api/tables/:tableName/row',
+    description: 'Authenticate user by email and password, returns JWT, rols and permissions.',
+    method: 'get',
+    validations: {},
+    action: async (req, res) => {
+      res.body = await getRow(req.params.tableName, JSON.parse(req.params.where));
+    }
+  },
+  {
+    route: '/api/tables/:tableName/history',
+    description: 'Authenticate user by email and password, returns JWT, rols and permissions.',
+    method: 'get',
+    validations: {},
+    action: async (req, res) => {
+      res.body = await getRowCDC(req.params.tableName, JSON.parse(req.params.where));
+    }
+  },
+  {
+    route: '/api/tables/:tableName/raw',
+    description: 'Authenticate user by email and password, returns JWT, rols and permissions.',
+    method: 'get',
+    validations: {},
+    action: async (req, res) => {
+      res.body = (await getCache())[req.params.tableName];
+    }
+  },
+]);

@@ -16,6 +16,7 @@ import Form from '@rjsf/mui';
 
 const GenericCat = ({ selectedCat, auth }) => {
     const schema = useSelector(state => state.dashboard.data?.schema);
+    const tablesSchema = useSelector(state => state.dashboard.data?.tablesSchema);
     const getRowId = r => pks.reduce((p, k) => p + '-' + r[k], '').slice(1);
     const toJSONFormParams = (basicSchema) => {
         // let basicSchema = [
@@ -95,22 +96,22 @@ const GenericCat = ({ selectedCat, auth }) => {
                 }
             }
         };
-        const schema = {
+        const tablesSchema = {
             "title": `Add a new registry to ${selectedCat}?`,
             // "description": "A simple form example.",
             "type": "object",
             "required": basicSchema?.filter(x => !x.isnullable).map(x => x.name),
             "properties": basicSchema?.reduce((p, x) => ({ ...p, [x.name]: { type: typeMapper[x.datatype] || x.datatype, title: x.name, default: null } }), {})
         }
-        return { formData, schema, uiSchema };
+        return { formData, tablesSchema, uiSchema };
     };
 
     const [rows, setRows] = useState([]);
     const [pks, setPks] = useState([]);
 
     useEffect(() => {
-        setPks(schema[selectedCat].filter(x => x.pk).map(x => x.name));
-        http.get(`/api/${selectedCat}/rows`).then(r => setRows(r.body));
+        setPks(tablesSchema[selectedCat].filter(x => x.pk).map(x => x.name));
+        http.get(`/api/tables/${selectedCat}/rows`).then(r => setRows(r.body));
     }, [selectedCat]);
 
     const DataGridDemo = () => {
@@ -133,7 +134,7 @@ const GenericCat = ({ selectedCat, auth }) => {
                     <DialogContent>
                         <DialogContentText>
                             <Form
-                                {...toJSONFormParams(schema[selectedCat])}
+                                {...toJSONFormParams(tablesSchema[selectedCat])}
                                 validator={validator}
                                 onChange={e => console.log('changed', e)}
                                 onSubmit={e => console.log('submitted', e)}
@@ -238,7 +239,7 @@ const GenericCat = ({ selectedCat, auth }) => {
                 }
             };
 
-            const columns = [...schema[selectedCat].map(x => {
+            const columns = [...tablesSchema[selectedCat].map(x => {
                 const getFlexSize = (x) => {
                     if (x.datatype === 'boolean') return 40;
                     if (x.datatype === 'character varying') return 160;

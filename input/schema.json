@@ -57,10 +57,11 @@
             }
         },
         "UI": {
-            "imports":[
+            "imports": [
                 "https://fonts.googleapis.com/css?family=Montserrat:300,400,500,600,700&display=swap"
             ],
             "style": {
+                "logo": "https://upe.cs.fiu.edu/wp-content/uploads/sites/3/2018/12/Discord-LogoWordmark-White.png",
                 "theme": {
                     "typography": {
                         "fontFamily": "Open Sans, sans-serif",
@@ -74,13 +75,13 @@
                             "main": "#DF8A0E",
                             "light": "#FFBB3B",
                             "dark": "#B37800",
-                            "contrastText": "#FFFFFF"
+                            "contrastText": "#00FFFF"
                         },
                         "secondary": {
                             "main": "#994895",
                             "light": "#CA75C0",
                             "dark": "#672C5F",
-                            "contrastText": "#FFFFFF"
+                            "contrastText": "#00FFFF"
                         },
                         "info": {
                             "main": "#0E99DF",
@@ -113,20 +114,17 @@
                 "users": {
                     "title": "Usuarios",
                     "icon": "Person",
-                    "type": "table",
-                    "params":{
+                    "type": "grid",
+                    "params": {
                         "table": "users"
                     }
                 },
                 "rols": {
                     "title": "Roles",
                     "icon": "AdminPanelSettings",
-                    "type": "rolsAndPermissions",
-                    "params":{
-                        "usersTable": "users",
-                        "rolsTable": "rols",
-                        "genericPermissionsTable": "genericPermissions",
-                        "customPermissionsTable": "customPermissions"
+                    "type": "grid",
+                    "params": {
+                        "table": "users"
                     }
                 }
             }

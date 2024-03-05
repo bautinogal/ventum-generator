@@ -4,14 +4,14 @@ import controllers from './controllers/index.js'
 import { before, after } from './middleware/index.js';
 import https from 'https';
 import { ssl, log } from './lib/index.js';
-import cors from 'cors';
+
 (async () => {
     try {
         log.info(`APP: Starting...`);
         let app = express();
-        before(app);
+        app = before(app);
         app.use(controllers);
-        after(app);
+        app = after(app);
         app.listen(env.app.port, e => {
             e ? log.fatal(e) : log.info(`APP: HTTP Server listening at port \x1b[33m${env.app.port}\x1b[0m`);
             let certificates = ssl.getCertificates();

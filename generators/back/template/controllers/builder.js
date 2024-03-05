@@ -1,15 +1,41 @@
 import { log } from '../lib/index.js';
-import {z, ZodError} from 'zod';
+import { z, ZodError } from 'zod';
+import Ajv from "ajv";
+import express from 'express';
+
+
+/**
+* @param {object} schema
+* @returns {object} returns ajv validator
+*/
+const getValidator = (schema) => {
+  const ajv = new Ajv() // options can be passed, e.g. {allErrors: true}
+  ajv.addKeyword({
+    keyword: "isFunction",
+    validate: (data) => {
+      return typeof data === "function";
+    },
+    metaSchema: {
+      type: "boolean",
+    }
+  });
+  return ajv.compile(schema);
+}
 /**
 * @param {object} req -> request
 * @param {object} res -> response
-* @param {function} criteria -> function that evaluates auth JWT
+* @param {function || object} criteria -> function that evaluates auth JWT or object with auth criteria (JSON schema)
 * @returns {Promise<[req:object,res:object]>} returns updated [req,res]
 */
 export const testAuth = async (req, res, criteria) => {
   let valid = false;
   try {
-    valid = await criteria(req?.auth);
+    if (typeof criteria === 'function')
+      valid = await criteria(req?.auth);
+    else if (typeof criteria === 'object')
+      valid = getValidator(criteria)(req?.auth);
+    else
+      throw new Error('Invalid auth criteria');
   } catch (error) {
     log.error(error);
     valid = false;
@@ -31,7 +57,12 @@ export const testAuth = async (req, res, criteria) => {
 export const testQuery = async (req, res, criteria) => {
   let valid = false;
   try {
-    valid = await criteria(req.query);
+    if (typeof criteria === 'function')
+      valid = await criteria(req?.query);
+    else if (typeof criteria === 'object')
+      valid = getValidator(criteria)(req?.query);
+    else
+      throw new Error('Invalid query criteria');
   } catch (error) {
     log.error(error);
     valid = false;
@@ -47,13 +78,18 @@ export const testQuery = async (req, res, criteria) => {
 /**
 * @param {object} req -> request
 * @param {object} res -> response
-* @param {function} criteria -> function that evaluates request body
+* @param {function || object} criteria -> function that evaluates request body
 * @returns {Promise<[req:object,res:object]>} returns updated [req,res]
 */
 export const testBody = async (req, res, criteria) => {
   let valid = false;
   try {
-    valid = await criteria(req.body);
+    if (typeof criteria === 'function')
+    valid = await criteria(req?.body);
+  else if (typeof criteria === 'object')
+    valid = getValidator(criteria)(req?.body);
+  else
+    throw new Error('Invalid body criteria');
   } catch (error) {
     log.error(error);
     valid = false;
@@ -67,20 +103,20 @@ export const testBody = async (req, res, criteria) => {
 export const testZbody = async (req, res, criteria) => {
 
   const zObject = z.object(criteria);
-    try{
-      zObject.parse(req.body);
-    } catch (error) {
-      if (error instanceof ZodError) {
-        console.log('Zod error')
-        //res.status(422).json(error);
-        res.status(422).body = error.issues.map(issue => ({path: issue.path, message: issue.message}));
-        //res.status(400).body.error = "Invalid body formatZod";
-      } else {
-        console.log(error);
-        res.status(500);
-      }
+  try {
+    zObject.parse(req.body);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      console.log('Zod error')
+      //res.status(422).json(error);
+      res.status(422).body = error.issues.map(issue => ({ path: issue.path, message: issue.message }));
+      //res.status(400).body.error = "Invalid body formatZod";
+    } else {
+      console.log(error);
+      res.status(500);
     }
-    return [req, res];
+  }
+  return [req, res];
 };
 /**
 * @param {object} req -> request
@@ -107,13 +143,18 @@ export const testBodyRows = async (req, res, criteria) => {
 /**
 * @param {object} req -> request
 * @param {object} res -> response
-* @param {function} criteria -> function that evaluates url params
+* @param {function || object} criteria -> function that evaluates url params
 * @returns {Promise<[req:object,res:object]} returns updated [req,res]
 */
 export const testParams = async (req, res, criteria) => {
   let valid = false;
   try {
-    valid = await criteria(req.params);
+    if (typeof criteria === 'function')
+    valid = await criteria(req?.params);
+  else if (typeof criteria === 'object')
+    valid = getValidator(criteria)(req?.params);
+  else
+    throw new Error('Invalid params criteria');
   } catch (error) {
     log.error(error);
     valid = false;
@@ -209,5 +250,115 @@ export const mapRows = (req, res, baseObj) => {
   return [req, res];
 }
 
+export const build = (endpoints) => {
+
+  //TODO: Swagger (open api) documentation
+  //TODO: Add support for file uploads
+  //TODO: Add support for file downloads
+  //TODO: Download "$ref": "https://json-schema.org/draft/2020-12/schema" and use it to validate the schema
+
+  //Create a router for each endpoint method
+  const patchEndpoints = (endpoints) => endpoints.reduce((p, x) => {
+    if (Array.isArray(x.method)) {
+      return p.concat(x.method.map(m => ({ ...x, method: m })));
+    } else {
+      x.method = x.method.toLowerCase();
+      if (x.method === '*') {
+        return p.concat(['get', 'post', 'put', 'patch', 'delete'].map(m => ({ ...x, method: m })));
+      } else {
+        return p.concat(x);
+      }
+    };
+  }, []);
+
+  const validateEndpoints = async (endpoints) => {
+
+    const getValidator = (schema) => {
+      const ajv = new Ajv() // options can be passed, e.g. {allErrors: true}
+      ajv.addKeyword({
+        keyword: "isFunction",
+        validate: (data) => {
+          return typeof data === "function";
+        },
+        metaSchema: {
+          type: "boolean",
+        }
+      });
+      return ajv.compile(schema);
+    };
+
+    const validator = getValidator({
+      type: "object",
+      properties: {
+        route: {
+          type: "string"
+        },
+        description: {
+          type: "string"
+        },
+        method: {
+          type: "string",
+          enum: ['get', 'post', 'put', 'patch', 'delete']
+        },
+        validate: {
+          type: "object",
+          properties: {
+            auth: {},
+            query: {},
+            body: {},
+            params: {}
+          }
+        },
+        action: {}
+      },
+      required: ["route", "method", "action"]
+    });
+
+    endpoints.forEach(endpoint => {
+      if (!validator(endpoint)) {
+        throw new Error('Invalid endpoint definition: ' + JSON.stringify(validator.errors, null, 2));
+      }
+
+    });
+
+  };
+
+  const buildRouter = (endpoints) => {
+
+    const validate = async (req, res, validations) => {
+      if (validations) {
+        const { auth, query, body, params } = validations;
+        if (auth)
+          [req, res] = await testAuth(req, res, auth);
+        if (query && res.ok())
+          [req, res] = await testQuery(req, res, query);
+        if (body && res.ok())
+          [req, res] = await testBody(req, res, body);
+        if (params && res.ok())
+          [req, res] = await testParams(req, res, params);
+      }
+      return res.ok();
+    }
+
+    const router = express.Router();
+
+    endpoints.forEach(endpoint => {
+      const { route, method, action, validations } = endpoint;
+      if (!['get', 'post', 'put', 'patch', 'delete'].includes(method))
+        throw new Error('Invalid method: ' + method + ' in endpoint: ' + route);
+
+      router[method](route, async (req, res, next) => {
+        await validate(req, res, validations) ? action(req, res) : null;
+        next();
+      });
+      router.all('*', (err, req, res, next) => log.error(err) && res.send({ error: err.stack }));
+    });
+    return router;
+  };
+
+  endpoints = patchEndpoints(endpoints);
+  validateEndpoints(endpoints);
+  return buildRouter(endpoints);
+}
 
 export default { mapRows, testAuth, testQuery, filesToArray, testBody, testBodyRows, testParams, toPascalCase, toCamelCase, keysToPC, keysToCC, toArray, testArr, bodyToArray, validEmail, testZbody };
