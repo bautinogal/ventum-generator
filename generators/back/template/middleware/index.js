@@ -6,6 +6,8 @@ import serveIndex from 'serve-index';
 import cookieParser from 'cookie-parser'; // Herramienta para parsear las cookies
 import bodyParser from 'body-parser'; // Herramienta para parsear el "cuerpo" de los requests
 import path from 'path';
+import { v4 } from 'uuid';
+
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -144,10 +146,16 @@ export const before = (app) => {
     next();
   };
 
+  const addReqData = async (req, res, next) => {
+    req.start = Date.now();
+    req.uuid = v4();
+    next();
+  };
+
   app = addMiddleware(app);
   app.use(addUtils);
   app.use(getAuth);
-  //app.use(logReq);
+  app.use(addReqData);
 
   return app;
 };
@@ -176,13 +184,15 @@ export const after = (app) => {
   };
 
   const respond = (req, res, next) => {
-   // console.log('respond', res.body);
+    // console.log('respond', res.body);
+    req.end = Date.now();
     res.send(res.body);
     next();
   };
 
   const logReq = async (req, res, next) => {
-    const bodyStr = JSON.stringify(req.body);
+    const reqBody = JSON.stringify(req.body);
+    const resBody = JSON.stringify(res.body);
     //Document with request info that will be stored at the DB
     const getRequestData = async (req) => {
       var result = {
@@ -207,24 +217,57 @@ export const after = (app) => {
 
     //Logs request data (settings from enviroment variables)
     const logRequest = async (data) => {
-      const logOptions = env.middleware.log.req;
-      if (eval(logOptions.req)) {
-        let logStr = `UTC: ${(new Date()).toLocaleString('en-GB', { timeZone: 'UTC' })} -- Req: ${data.hash}
-\x1b[35mREQ >>\x1b[0m\x1b[32m HTTP\x1b[0m \x1b[36m${data.method}\x1b[0m at \x1b[33m${data.url}\x1b[0m from \x1b[33m${req.ip}\x1b[0m`;
-        if (eval(logOptions.headers)) logStr += (` 
-Headers: ${JSON.stringify(data.headers, null, 2)}`);
-        if (logOptions?.body === 'oneline') logStr += (`
-Body: ${bodyStr?.substring(0, 80)}${bodyStr && bodyStr.length > 80 ? '...' : ''} (Length ${bodyStr?.length})`);
-        else if (eval(logOptions.body)) logStr += (`
-Body: ${Array.isArray(data.body) ? limitedArrStr(data.body, 5) : JSON.stringify(data.body, null, 2)}`);
-        if (logOptions?.auth === 'oneline') logStr += (`
-Auth: ${JSON.stringify({ valid: data?.auth?.jwt.valid, id: data?.auth?.personaId, email: data?.auth?.jwt?.payload.email, roles: data?.auth?.roles })}`);
-        else if (eval(logOptions.auth)) logStr += (`
-Auth: ${JSON.stringify(data.auth, null, 2)}`);
 
-        log.info(`${logStr}
-`);
+      function getDateTimeWithMilliseconds(ts) {
+        const date = new Date(ts);
+        const milliseconds = date.getMilliseconds();
+        const dateTimeWithoutMilliseconds = date.toLocaleString('en-GB', { timeZone: 'UTC' });
+
+
+        const formattedMilliseconds = milliseconds.toString().padStart(3, '0');
+        const dateTimeWithMilliseconds = `${dateTimeWithoutMilliseconds}.${formattedMilliseconds}`;
+
+        return dateTimeWithMilliseconds;
       }
+
+      const logOptions = env.middleware.log.req;
+
+      let logStr = `\x1b[35m>>\x1b[0m\x1b[32m HTTP\x1b[0m \x1b[36m${data.method}\x1b[0m \x1b[33m${data.url}\x1b[0m ${data.hash}\x1b[0m`
+
+      //RESQUEST
+      if (eval(logOptions.req)) {
+        logStr += (`
+\x1b[35mREQ\x1b[0m from \x1b[33m${data.ip}\x1b[0m at ${getDateTimeWithMilliseconds(req.start)} (UTC)\x1b[0m`);
+        if (eval(logOptions.headers)) logStr += (` 
+  Headers: ${JSON.stringify(data.headers, null, 2)}`);
+        if (logOptions?.auth === 'oneline') logStr += (`
+  Auth: ${JSON.stringify({ valid: data?.auth?.jwt.valid, id: data?.auth?.personaId, email: data?.auth?.jwt?.payload.email, roles: data?.auth?.roles })}`);
+        else if (eval(logOptions.auth)) logStr += (`
+  Auth: ${JSON.stringify(data.auth, null, 2)}`);
+        if (logOptions?.body === 'oneline') logStr += (`
+  Body: ${reqBody?.substring(0, 80)}${reqBody && reqBody.length > 80 ? '...' : ''} (Length ${reqBody?.length})`);
+        else if (eval(logOptions.body)) logStr += (`
+  Body: ${Array.isArray(data.body) ? limitedArrStr(data.body, 5) : JSON.stringify(data.body, null, 2)}`);
+      }
+
+      //RESPONSE
+      if (eval(logOptions.res) || true) {
+        logStr += (`
+\x1b[35mRES\x1b[0m code \x1b[32m${res.statusCode} \x1b[0m${getDateTimeWithMilliseconds(req.end)} (UTC)\x1b[0m`);
+        if (eval(logOptions.headers)) logStr += (` 
+  Headers: ${JSON.stringify(res.getHeaders(), null, 2)}`);
+        if (logOptions?.auth === 'oneline') logStr += (`
+  Auth: ${JSON.stringify({ valid: res?.auth?.jwt?.valid, id: res?.auth?.personaId, email: res?.auth?.jwt?.payload.email, roles: res?.auth?.roles })}`);
+        else if (eval(logOptions.auth)) logStr += (`
+  Auth: ${JSON.stringify(res.auth, null, 2)}`);
+        if (logOptions?.body === 'oneline') logStr += (`
+  Body: ${resBody?.substring(0, 80)}${resBody && resBody.length > 80 ? '...' : ''} (Length ${resBody?.length})`);
+        else if (eval(logOptions.body)) logStr += (`
+  Body: ${Array.isArray(res.body) ? limitedArrStr(res.body, 5) : JSON.stringify(res.body, null, 2)}`);
+      }
+
+      log.info(`${logStr}
+      `);
     };
 
     let reqData = await getRequestData(req);
@@ -251,7 +294,6 @@ Auth: ${JSON.stringify({ valid: res?.auth?.jwt?.valid, id: res?.auth?.personaId,
         else if (eval(logOptions.auth)) logStr += (`
 Auth: ${JSON.stringify(res.auth, null, 2)}`);
 
-
         log.info(`${logStr}
 `);
         //log.info(`\x1b[35m<<\x1b[0m \x1b[32m${res.statusCode} \x1b[0m (\x1b[32mHTTP\x1b[0m \x1b[36m${req.method}\x1b[0m at \x1b[33m${req.url}\x1b[0m from \x1b[33m${req.ip}\x1b[0m)`);
@@ -265,6 +307,6 @@ Auth: ${JSON.stringify(res.auth, null, 2)}`);
   app.use(errorHandler);
   app.use(respond);
   app.use(logReq);
-  app.use(logRes);
+  // app.use(logRes);
   return app;
 };

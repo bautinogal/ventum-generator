@@ -69,15 +69,15 @@ export const generate = async (schema, tables) => {
                     url: process.env.MIDDLEWARE_LOG_REQ_URL || true,
                     method: process.env.MIDDLEWARE_LOG_REQ_METHOD || true,
                     query: process.env.MIDDLEWARE_LOG_REQ_QUERY || true,
-                    headers: process.env.MIDDLEWARE_LOG_REQ_HEADERS || false,
+                    headers: process.env.MIDDLEWARE_LOG_REQ_HEADERS || true,
                     body: process.env.MIDDLEWARE_LOG_REQ_BODY || 'oneline',
                     auth: process.env.MIDDLEWARE_LOG_REQ_AUTH || 'oneline',
                   },
                   res: {
                     res: process.env.MIDDLEWARE_LOG_RES_RES || true,
-                    headers: process.env.MIDDLEWARE_LOG_RES_HEADERS || false,
+                    headers: process.env.MIDDLEWARE_LOG_RES_HEADERS || true,
                     body: process.env.MIDDLEWARE_LOG_RES_BODY || 'oneline',
-                    auth: process.env.MIDDLEWARE_LOG_RES_AUTH || false,
+                    auth: process.env.MIDDLEWARE_LOG_RES_AUTH || true,
                   }
                 },
               }
