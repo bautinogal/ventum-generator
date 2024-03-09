@@ -14,7 +14,6 @@ export const postDetectores = createAsyncThunk(
     thunkAPI.dispatch(getDetectores());
     return res;
   }
-
 );
 
 export const deleteDetectores = createAsyncThunk(

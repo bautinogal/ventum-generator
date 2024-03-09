@@ -85,11 +85,11 @@ export const testBody = async (req, res, criteria) => {
   let valid = false;
   try {
     if (typeof criteria === 'function')
-    valid = await criteria(req?.body);
-  else if (typeof criteria === 'object')
-    valid = getValidator(criteria)(req?.body);
-  else
-    throw new Error('Invalid body criteria');
+      valid = await criteria(req?.body);
+    else if (typeof criteria === 'object')
+      valid = getValidator(criteria)(req?.body);
+    else
+      throw new Error('Invalid body criteria');
   } catch (error) {
     log.error(error);
     valid = false;
@@ -150,11 +150,11 @@ export const testParams = async (req, res, criteria) => {
   let valid = false;
   try {
     if (typeof criteria === 'function')
-    valid = await criteria(req?.params);
-  else if (typeof criteria === 'object')
-    valid = getValidator(criteria)(req?.params);
-  else
-    throw new Error('Invalid params criteria');
+      valid = await criteria(req?.params);
+    else if (typeof criteria === 'object')
+      valid = getValidator(criteria)(req?.params);
+    else
+      throw new Error('Invalid params criteria');
   } catch (error) {
     log.error(error);
     valid = false;
@@ -348,7 +348,12 @@ export const build = (endpoints) => {
         throw new Error('Invalid method: ' + method + ' in endpoint: ' + route);
 
       router[method](route, async (req, res, next) => {
-        await validate(req, res, validations) ? action(req, res) : null;
+        if (await validate(req, res, validations))
+          try {
+            await action(req, res)
+          } catch (error) {
+            log.error(error)
+          }
         next();
       });
       router.all('*', (err, req, res, next) => log.error(err) && res.send({ error: err.stack }));

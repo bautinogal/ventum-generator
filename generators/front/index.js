@@ -116,7 +116,7 @@ export const generate = async (schema, tables) => {
         sidebarComponents: Object.entries(schema?.properties?.UI?.categories || {}).map(([key, cat], i) => {
             return `<div onClick={(e) => e.stopPropagation() || dispatch(setSelectedCat("${key}"))} className="sidebar-category-button">
                 <IconButton children={<${cat.icon}/>} />
-                <Button className="sidebar-category-button-text" children={"${key.toUpperCase()}"} />
+                <Button className="sidebar-category-button-text" children={"${cat?.title?.toUpperCase() || key.toUpperCase()}"} />
             </div>`
         }).join('\n'),
 };

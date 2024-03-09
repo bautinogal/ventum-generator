@@ -11,59 +11,28 @@ import {
 } from '@mui/icons-material';
 import { DataGrid, GridToolbar, GridActionsCellItem } from '@mui/x-data-grid';
 
+import { getData, postRow } from "./GenericCatSlice.js";
 import validator from '@rjsf/validator-ajv8';
+import Ajv from 'ajv';
+const ajv = new Ajv({ allErrors: true, useDefaults: true });
 import Form from '@rjsf/mui';
 
+import { styled } from '@mui/material/styles';
+import { tooltipClasses } from '@mui/material/Tooltip';
+
 const GenericCat = ({ selectedCat, auth }) => {
-    const schema = useSelector(state => state.dashboard.data?.schema);
-    const tablesSchema = useSelector(state => state.dashboard.data?.tablesSchema);
+
+    const { rows, pks, fks } = useSelector(state => state.genericCat.data);
+    const schema = useSelector(state => state.dashboard.data?.schema?.properties.tables?.properties);
+
     const getRowId = r => pks.reduce((p, k) => p + '-' + r[k], '').slice(1);
     const toJSONFormParams = (basicSchema) => {
-        // let basicSchema = [
-        //     {
-        //         "name": "id",
-        //         "datatype": "integer",
-        //         "isnullable": false,
-        //         "defaultvalue": "nextval('knex_migrations_id_seq'::regclass)",
-        //         "position": 1,
-        //         "pk": true,
-        //         "fk": false
-        //     },
-        //     {
-        //         "name": "name",
-        //         "datatype": "character varying",
-        //         "isnullable": true,
-        //         "defaultvalue": null,
-        //         "position": 2,
-        //         "pk": false,
-        //         "fk": false
-        //     },
-        //     {
-        //         "name": "batch",
-        //         "datatype": "integer",
-        //         "isnullable": true,
-        //         "defaultvalue": null,
-        //         "position": 3,
-        //         "pk": false,
-        //         "fk": false
-        //     },
-        //     {
-        //         "name": "migration_time",
-        //         "datatype": "timestamp with time zone",
-        //         "isnullable": true,
-        //         "defaultvalue": null,
-        //         "position": 4,
-        //         "pk": false,
-        //         "fk": false
-        //     }
-        // ]
-        const typeMapper = {
-            "character varying": "string",
-            "bigint": "integer",
-            "timestamp with time zone": "date",
-            "jsonb": "object",
-        }
-        const formData = {};
+        const properties = Object.entries(basicSchema?.properties || {}).reduce((p, [k, v]) => {
+            if (!((v.type === 'array' || v.type === 'object') && schema?.[k] != null)) // TODO: No se incluyen las FKs
+                p[k] = v;
+            return p;
+        }, {});
+        const formSchema = { ...basicSchema, properties };
         const uiSchema = {
             "firstName": {
                 "ui:autofocus": true,
@@ -96,27 +65,17 @@ const GenericCat = ({ selectedCat, auth }) => {
                 }
             }
         };
-        const tablesSchema = {
-            "title": `Add a new registry to ${selectedCat}?`,
-            // "description": "A simple form example.",
-            "type": "object",
-            "required": basicSchema?.filter(x => !x.isnullable).map(x => x.name),
-            "properties": basicSchema?.reduce((p, x) => ({ ...p, [x.name]: { type: typeMapper[x.datatype] || x.datatype, title: x.name, default: null } }), {})
-        }
-        return { formData, tablesSchema, uiSchema };
+        return { schema: formSchema, uiSchema };
     };
 
-    const [rows, setRows] = useState([]);
-    const [pks, setPks] = useState([]);
+    const dispatch = useDispatch();
+    const refreshData = () => { dispatch(getData({ schema, catName: selectedCat })) };
 
-    useEffect(() => {
-        setPks(tablesSchema[selectedCat].filter(x => x.pk).map(x => x.name));
-        http.get(`/api/tables/${selectedCat}/rows`).then(r => setRows(r.body));
-    }, [selectedCat]);
+    useEffect(refreshData, [selectedCat]);
 
     const DataGridDemo = () => {
-
-        const [selectedRow, setSelectedRow] = useState(null);
+        const [selectedRow, setSelectedRow] = useState();
+        const [checkboxSelection, setCheckboxSelection] = useState([]);
 
         const Topbar = () => {
             const [open, setOpen] = useState(false);
@@ -134,11 +93,10 @@ const GenericCat = ({ selectedCat, auth }) => {
                     <DialogContent>
                         <DialogContentText>
                             <Form
-                                {...toJSONFormParams(tablesSchema[selectedCat])}
+                                {...toJSONFormParams(schema?.[selectedCat]?.items)}
+                                onSubmit={(v) => console.log(v) || dispatch(postRow({ table: selectedCat, row: v.formData }))}
+                                onError={e => console.log('errors', e, toJSONFormParams(schema?.[selectedCat]?.items))}
                                 validator={validator}
-                                onChange={e => console.log('changed', e)}
-                                onSubmit={e => console.log('submitted', e)}
-                                onError={e => console.log('errors', e)}
                             />
                         </DialogContentText>
                     </DialogContent>
@@ -156,115 +114,231 @@ const GenericCat = ({ selectedCat, auth }) => {
                     </Grid>
                     {selectedRow ? null : <Grid item xs={2} sx={{ alignSelf: 'center', textAlignLast: 'end', paddingRight: '1rem' }}>
                         <IconButton className="mb-3" variant="outlined" color='success' onClick={handleClickOpen} children={<Add />} />
-                        <IconButton className="mb-3" variant="outlined" color='info' onClick={handleClickOpen} children={<Refresh />} />
-                        <IconButton className="mb-3" variant="outlined" color='error' onClick={handleClickOpen} children={<Delete />} />
+                        <IconButton className="mb-3" variant="outlined" color='info' onClick={refreshData} children={<Refresh />} />
+                        <IconButton className="mb-3" variant="outlined" color='error' disabled={true} onClick={handleClickOpen} children={<Delete />} />
                     </Grid>}
                 </Grid>
             </>
         };
 
         const Table = () => {
-            const getActionColumn = () => {
 
-                const ActionButton = (v) => {
-
-                    const [anchorEl, setAnchorEl] = React.useState(null);
-                    const popperRef = useRef(null);
-                    const open = Boolean(anchorEl);
-
-                    const handleClick = (event) => {
-                        setAnchorEl(anchorEl ? null : event.currentTarget);
-                    };
-
-                    const handleClickOutside = (event) => {
-                        if (popperRef.current && !popperRef.current.contains(event.target)) {
-                            setAnchorEl(null);
-                        }
-                    };
-
-                    useEffect(() => {
-                        // Agrega escuchador de clics al documento
-                        document.addEventListener('mousedown', handleClickOutside);
-                        return () => {
-                            // Limpia el escuchador al desmontar el componente
-                            document.removeEventListener('mousedown', handleClickOutside);
-                        };
-                    }, []);
-
-                    const canBeOpen = open && Boolean(anchorEl);
-                    const id = canBeOpen ? getRowId(v) + '-spring-popper' : undefined;
-
-                    return <div>
-                        <IconButton color='grey.700' label={'Ver Detalles'} children={<MoreHoriz />} onClick={handleClick} />
-                        <Popper id={id} open={open} ref={popperRef} anchorEl={anchorEl} transition>
-                            {({ TransitionProps }) => (
-                                <Fade {...TransitionProps}>
-                                    <Card sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}>
-                                        <CardContent>
-                                            <Typography sx={{ fontSize: 16 }} color="grey.700" gutterBottom>
-                                                Actions
-                                            </Typography>
-                                            <Divider />
-                                            <List>
-                                                <ListItem disablePadding>
-                                                    <Button variant="text" color='info' onClick={e => setSelectedRow(v.id)} endIcon={<Visibility />} children={'Details'} />
-                                                </ListItem>
-                                                <ListItem disablePadding>
-                                                    <Button variant="text" color='info' onClick={e => setSelectedRow(v.id)} endIcon={<Edit />} children={'Edition'} />
-                                                </ListItem>
-                                                <ListItem disablePadding>
-                                                    <Button variant="text" color='info' onClick={e => setSelectedRow(v.id)} endIcon={<AttachFile />} children={'Attachments'} />
-                                                </ListItem>
-                                                <ListItem disablePadding>
-                                                    <Button variant="text" color='info' onClick={e => setSelectedRow(v.id)} endIcon={<Comment />} children={'Comments'} />
-                                                </ListItem>
-                                                <ListItem disablePadding>
-                                                    <Button variant="text" color='info' onClick={e => setSelectedRow(v.id)} endIcon={<History />} children={'History'} />
-                                                </ListItem>
-                                            </List>
-                                        </CardContent>
-                                    </Card>
-                                </Fade>
-                            )}
-                        </Popper>
+            const ScrollableTooltip = ({ title, children }) => {
+                // Contenido desplazable dentro del Tooltip
+                const CustomTooltipContent = () => (
+                    <div style={{
+                        maxHeight: '50vh', // Ajusta la altura máxima según necesites
+                        overflowY: 'auto', // Habilita el desplazamiento vertical
+                        //marginRight: '-16px', // Compensa el ancho de la barra de desplazamiento
+                        //paddingRight: '16px', // Mantiene el espacio para el contenido, ajusta según el ancho real de la barra de desplazamiento
+                        scrollbarWidth: 'none', // Especifico para Firefox
+                        '::WebkitScrollbar': {
+                            display: 'none' // Especifico para WebKit (Chrome, Safari, etc.)
+                        },
+                        padding: '8px'
+                    }} >
+                        {title}
                     </div >
-                }
+                );
+                const LightTooltip = styled(({ className, ...props }) => (
+                    <Tooltip {...props} classes={{ popper: className }} />
+                ))(({ theme }) => ({
+                    [`& .${tooltipClasses.tooltip}`]: {
+                        backgroundColor: theme.palette.common.white,
+                        color: 'rgba(0, 0, 0, 0.87)',
+                        boxShadow: theme.shadows[1],
+                        fontSize: 11,
+                        minWidth: '5vw', // Ajusta el ancho máximo según necesites
+                        maxWidth: '50vw', // Ajusta el ancho máximo según necesites
+                    },
+                }));
+                return (
+                    <LightTooltip title={<CustomTooltipContent />} arrow>
+                        {children}
+                    </LightTooltip>
+                );
+            };
 
-                return {
+            const getColumns = () => {
+                const tableSchema = schema[selectedCat]?.items?.properties;
+
+                const actionColumn = {
                     field: 'actions',
                     headerName: 'Actions',
                     width: 100,
                     type: 'actions',
-                    renderCell: ActionButton
-                }
+                    renderCell: (v) => {
+
+                        const [anchorEl, setAnchorEl] = React.useState(null);
+                        const popperRef = useRef(null);
+                        const open = Boolean(anchorEl);
+
+                        const handleClick = (event) => {
+                            setAnchorEl(anchorEl ? null : event.currentTarget);
+                        };
+
+                        const handleClickOutside = (event) => {
+                            if (popperRef.current && !popperRef.current.contains(event.target)) {
+                                setAnchorEl(null);
+                            }
+                        };
+
+                        useEffect(() => {
+                            // Agrega escuchador de clics al documento
+                            document.addEventListener('mousedown', handleClickOutside);
+                            return () => {
+                                // Limpia el escuchador al desmontar el componente
+                                document.removeEventListener('mousedown', handleClickOutside);
+                            };
+                        }, []);
+
+                        const canBeOpen = open && Boolean(anchorEl);
+                        const id = canBeOpen ? getRowId(v) + '-spring-popper' : undefined;
+
+                        return <div>
+                            <IconButton color={'primary'} label={'Ver Detalles'} children={<MoreHoriz />} onClick={handleClick} />
+                            <Popper id={id} open={open} ref={popperRef} anchorEl={anchorEl} transition>
+                                {({ TransitionProps }) => (
+                                    <Fade {...TransitionProps}>
+                                        <Card sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}>
+                                            <CardContent>
+                                                <Typography sx={{ fontSize: 16 }} color="grey.700" gutterBottom>
+                                                    Actions
+                                                </Typography>
+                                                <Divider />
+                                                <List>
+                                                    <ListItem disablePadding>
+                                                        <Button variant="text" color='info' onClick={e => setSelectedRow(v.id)} endIcon={<Visibility />} children={'Details'} />
+                                                    </ListItem>
+                                                    <ListItem disablePadding>
+                                                        <Button variant="text" color='info' onClick={e => setSelectedRow(v.id)} endIcon={<Edit />} children={'Edition'} />
+                                                    </ListItem>
+                                                    <ListItem disablePadding>
+                                                        <Button variant="text" color='info' onClick={e => setSelectedRow(v.id)} endIcon={<AttachFile />} children={'Attachments'} />
+                                                    </ListItem>
+                                                    <ListItem disablePadding>
+                                                        <Button variant="text" color='info' onClick={e => setSelectedRow(v.id)} endIcon={<Comment />} children={'Comments'} />
+                                                    </ListItem>
+                                                    <ListItem disablePadding>
+                                                        <Button variant="text" color='info' onClick={e => setSelectedRow(v.id)} endIcon={<History />} children={'History'} />
+                                                    </ListItem>
+                                                </List>
+                                            </CardContent>
+                                        </Card>
+                                    </Fade>
+                                )}
+                            </Popper>
+                        </div >
+                    }
+                };
+
+                const columns = [...Object.entries(tableSchema || {}).map(([k, x]) => {
+
+                    const getFlexSize = (x) => {
+                        if (x.datatype === 'array') return 60;
+                        if (x.datatype === 'boolean') return 40;
+                        if (x.datatype === 'character varying') return 160;
+                        if (x.datatype === 'integer') return 80;
+                        if (x.datatype === 'timestamp with time zone') return 160;
+                        return 150;
+                    };
+
+                    const ToolTipItem = (props) => {
+
+                        const GetItem = (props) => {
+
+                            const GetValue = (props) => {
+                                const { k, v } = props;
+                                switch (typeof v) {
+                                    case 'string': return <div style={{ display: 'flex', alignItems: 'center' }} gap={0}>
+                                        <Typography sx={{ color: 'var(--grey-800)' }} children={`${k}:`} />
+                                        <Typography
+                                            sx={{
+                                                color: 'var(--primary-main)', paddingLeft: '0.5rem', whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                marginRight: '16px'
+                                            }} children={`"${v}"`} />
+                                    </div>;
+                                    case 'number': return <div style={{ display: 'flex', alignItems: 'center' }} gap={0}>
+                                        <Typography sx={{ color: 'var(--grey-800)' }} children={`${k}:`} />
+                                        <Typography
+                                            sx={{
+                                                color: 'var(--info-main)', paddingLeft: '0.5rem', whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                marginRight: '16px'
+                                            }} children={v} />
+                                    </div>;
+                                    case 'boolean': return <div style={{ display: 'flex', alignItems: 'center' }} gap={0}>
+                                        <Typography sx={{ color: 'var(--grey-800)' }} children={`${k}:`} />
+                                        <Typography
+                                            sx={{
+                                                color: 'var(--secondary-main)', paddingLeft: '0.5rem', whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                marginRight: '16px'
+                                            }} children={v} />
+                                    </div>;
+                                    case 'object': return <div style={{ display: 'flex', alignItems: 'center' }} gap={0}>
+                                        <Typography sx={{ color: 'var(--grey-800)' }} children={`${k}:`} />
+                                        <Typography
+                                            sx={{
+                                                color: 'white', paddingLeft: '0.5rem', whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                marginRight: '16px'
+                                            }} children={v} />
+                                    </div>;
+                                    default: break;
+                                }
+                                typeof props === 'object' ? JSON.stringify(props) : props;
+                                typeof v === 'object' ? JSON.stringify(v) : v;
+                            }
+
+                            return GetValue(props);
+                            return `${k} : ${GetValue({ v })}`;
+                        };
+
+                        if (typeof props === 'object') {
+                            return Object.entries(props).map(([k, v]) => <GetItem k={k} v={v} />)
+                        } else {
+                            return props;
+                        }
+                    }
+
+                    return {
+                        field: k,
+                        headerName: x.title || k,
+                        flex: getFlexSize(x),
+                        editable: true,
+                        renderCell: (params) => {
+                            if (x.type === 'timestamp with time zone') return new Date(params.value).toLocaleString();
+                            if (x.type === 'boolean') return params.value ? <Check color='success' /> : <Close color='error' />;
+                            if (x.type === 'array') return <ScrollableTooltip
+                                title={<List
+                                    children={params.value?.map(x => <ListItem disablePadding key={x.id}
+                                        children={<ListItemButton
+                                            children={<ListItemText primary={<ToolTipItem {...x} />} />}
+                                        />}
+                                    />)}
+                                />}
+                                children={<Button children={params.value?.length} />}
+                            />;
+                            if (x.type === 'object') return <ScrollableTooltip title={JSON.stringify(params.value)} children={<Button children={'{ ... }'} />} />;
+                            return params.value;
+                        }
+                    }
+                }), actionColumn];
+
+                return columns;
             };
 
-            const columns = [...tablesSchema[selectedCat].map(x => {
-                const getFlexSize = (x) => {
-                    if (x.datatype === 'boolean') return 40;
-                    if (x.datatype === 'character varying') return 160;
-                    if (x.datatype === 'integer') return 80;
-                    if (x.datatype === 'timestamp with time zone') return 160;
-                    return 150;
-                }
-                return {
-                    field: x.name,
-                    headerName: x.name,
-                    flex: getFlexSize(x),
-                    editable: true,
-                    renderCell: (params) => {
-                        if (x.datatype === 'timestamp with time zone') return new Date(params.value).toLocaleString();
-                        if (x.datatype === 'boolean') return params.value ? <Check color='success' /> : <Close color='error' />;
-                        return params.value;
-
-                    }
-                }
-            }), getActionColumn()];
-
+            const columns = getColumns();
             return <Box sx={{ padding: '1rem', paddingTop: '0' }}>
                 <DataGrid
                     checkboxSelection
-                    disableRowSelectionOnClick
+                    //disableRowSelectionOnClick
                     autoHeight
                     getRowId={getRowId}
                     rows={rows}
@@ -278,6 +352,8 @@ const GenericCat = ({ selectedCat, auth }) => {
                             showQuickFilter: true,
                         },
                     }}
+                    onSelectionModelChange={(v) => setCheckboxSelection(v)}
+                    selectionModel={checkboxSelection}
                 />
             </Box>
         };

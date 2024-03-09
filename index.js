@@ -4,6 +4,11 @@ import $RefParser from "@apidevtools/json-schema-ref-parser";
 import { generate } from './generators/index.js';
 const { readFile, writeFile, mkdir } = fs.promises;
 
+const patchJsonSchema = (schema) => {
+    Object.entries(schema.definitions).forEach(([k, v]) =>  v.name = k);
+    return schema;
+};
+
 const schemaToTables = (schema) => {
 
     const typeMapper = (type) => {
@@ -39,7 +44,7 @@ const schemaToTables = (schema) => {
         const addTable = (tables, tableName, tableDef) => {
 
             let newTable = {
-                name: tableName, static: Boolean(tableDef['x-static']), columns: [
+                name: tableName, static: Boolean(tableDef['static']), columns: [
                     { name: 'id', type: 'increments', nullable: false, fkTable: null, fkTable: null, defaultTo: undefined, pk: true }
                 ]
             };
@@ -60,7 +65,7 @@ const schemaToTables = (schema) => {
                         const joinTableName = tableName + entityTableName.charAt(0).toUpperCase() + entityTableName.slice(1) + 'Map';
                         const joinTable = {
                             name: joinTableName,
-                            static: Boolean(columnDef['x-static']),
+                            static: Boolean(columnDef['static']),
                             columns: [
                                 {
                                     name: (tableDef.items.title || tableName).charAt(0).toLowerCase() + (tableDef.items.title || tableName).slice(1).replace(' ', '') + 'Id',
@@ -287,7 +292,9 @@ const writeOutput = async (schema, tables) => {
 };
 
 readFile('./input/schema.json', 'utf8').then(async data => {
-    let jsonSchema = await $RefParser.dereference(JSON.parse(data.toString()));
+    let jsonSchema = JSON.parse(data.toString());  
+    jsonSchema = patchJsonSchema(jsonSchema);
+    jsonSchema = await $RefParser.dereference(jsonSchema);
     let tables = schemaToTables(jsonSchema);
     [jsonSchema, tables] = await addGenericPermissionsEnums(jsonSchema, tables);
     [jsonSchema, tables] = await addDefaults(jsonSchema, tables);

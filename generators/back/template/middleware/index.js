@@ -75,7 +75,6 @@ export const before = (app) => {
     const getAuth = async () => {
 
       const getData = async (auth) => {
-        //const user = await getRow('users', { email, password: await crypto.hash(password) });
         const user = { ...await getRow('users', { id: auth.jwt.decodedJWT.payload.id }) };
         if (user) {
           delete user.password;
@@ -187,8 +186,6 @@ export const after = (app) => {
         body: req.body,
       };
 
-      result.hash = await crypto.hash(result);
-      req.hash = result.hash;
       return result;
     };
 
@@ -211,7 +208,7 @@ export const after = (app) => {
       const reqLogOptions = env.middleware.log.req;
       const resLogOptions = env.middleware.log.res;
 
-      let logStr = `\x1b[35m>>\x1b[0m\x1b[32m HTTP\x1b[0m \x1b[36m${data.method}\x1b[0m \x1b[33m${data.url}\x1b[0m ${req.end - req.start}ms ${data.hash}\x1b[0m`
+      let logStr = `\x1b[35m>>\x1b[0m\x1b[32m HTTP\x1b[0m \x1b[36m${data.method}\x1b[0m \x1b[33m${data.url}\x1b[0m ${req.end - req.start}ms ${req.uuid}\x1b[0m`
 
       //RESQUEST
       if (eval(reqLogOptions.req)) {

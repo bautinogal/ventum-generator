@@ -28,7 +28,7 @@
                 "genericPermissions": {
                     "title": "Generic Permissions",
                     "type": "array",
-                    "x-static": true,
+                    "static": true,
                     "items": {
                         "$ref": "#/definitions/genericPermission"
                     }
@@ -136,27 +136,32 @@
             "type": "object",
             "properties": {
                 "email": {
+                    "title": "Email",
                     "type": "string",
                     "format": "email",
-                    "x-important": true
+                    "important": true
                 },
                 "password": {
+                    "title": "Password",
                     "type": "string",
                     "x-hashed": true,
                     "minLength": 8,
                     "maxLength": 64
                 },
                 "name": {
+                    "title": "Nombre",
                     "type": "string",
                     "maxLength": 64,
-                    "x-important": true
+                    "important": true
                 },
                 "lastName": {
+                    "title": "Apellido",
                     "type": "string",
                     "maxLength": 64,
-                    "x-important": true
+                    "important": true
                 },
-                "roles": {
+                "rols": {
+                    "title": "Roles",
                     "type": "array",
                     "uniqueItems": true,
                     "items": {
@@ -178,13 +183,16 @@
             "type": "object",
             "properties": {
                 "name": {
+                    "title": "Nombre",
                     "type": "string",
-                    "x-important": true
+                    "important": true
                 },
                 "description": {
+                    "title": "Descripción",
                     "type": "string"
                 },
                 "genericPermissions": {
+                    "title": "Permisos Genéricos",
                     "type": "array",
                     "uniqueItems": true,
                     "items": {
@@ -192,6 +200,7 @@
                     }
                 },
                 "customPermissions": {
+                    "title": "Permisos Customizados",
                     "type": "array",
                     "uniqueItems": true,
                     "items": {
@@ -208,11 +217,11 @@
         "genericPermission": {
             "title": "Generic Permission",
             "type": "object",
-            "x-static": true,
+            "static": true,
             "properties": {
                 "table": {
                     "$ref": "#/definitions/tables",
-                    "x-important": true
+                    "important": true
                 },
                 "action": {
                     "type": "string",
@@ -234,7 +243,7 @@
                         "writeComments": "Write Comments",
                         "readHistory": "Read History"
                     },
-                    "x-important": true
+                    "important": true
                 },
                 "description": {
                     "type": "string"
@@ -248,11 +257,11 @@
         "customPermission": {
             "title": "Permission",
             "type": "object",
-            "x-static": true,
+            "static": true,
             "properties": {
                 "name": {
                     "type": "string",
-                    "x-important": true
+                    "important": true
                 },
                 "description": {
                     "type": "string"
@@ -268,7 +277,7 @@
             "properties": {
                 "text": {
                     "type": "string",
-                    "x-important": true
+                    "important": true
                 },
                 "table": {
                     "type": "array",
@@ -292,7 +301,7 @@
             "properties": {
                 "name": {
                     "type": "string",
-                    "x-important": true
+                    "important": true
                 },
                 "url": {
                     "type": "string"
@@ -302,7 +311,7 @@
                 },
                 "type": {
                     "type": "string",
-                    "x-important": true
+                    "important": true
                 },
                 "table": {
                     "type": "array",

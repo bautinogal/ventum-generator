@@ -20,7 +20,8 @@ const Dashboard = (props) => {
 
     const Sidebar = () => {
 
-        const isExpanded = useSelector(state => state.dashboard.isExpanded);
+        //const isExpanded = useSelector(state => state.dashboard.isExpanded);
+        const isExpanded = true;
         const schema = useSelector(state => state.dashboard.data?.schema);
 
         const Logo = () => {
@@ -62,7 +63,7 @@ const Dashboard = (props) => {
             </div>);
         };
 
-        return (<div className={`sidebar ${isExpanded ? 'expanded' : ''}`} onClick={e => dispatch(setIsExpanded(!isExpanded))}>
+        return (<div className={`sidebar ${isExpanded ? 'expanded' : ''}`} onClick={e => dispatch(setIsExpanded(true))}>
             <Logo />
             <div className="sidebar-category-options" style={{ borderBottom: '2px solid #ccc' }}>
                 <Profile />
@@ -74,7 +75,8 @@ const Dashboard = (props) => {
     };
 
     const Main = () => {
-        const isExpanded = useSelector(state => state.dashboard.isExpanded);
+        //const isExpanded = useSelector(state => state.dashboard.isExpanded);
+        const isExpanded = true;
         const schema = useSelector(state => state.dashboard.data?.schema);
         const selectedCat = useSelector(state => state.dashboard.selectedCat);
 

@@ -90,13 +90,13 @@ const init = async () => {
     })();
     const schemaHash = createHash(JSON.stringify(schema));
 
-    const query = async (query, params) => {
+    const runQuery = async (query, params) => {
         let retries = 5;
         for (let i = 0; i < retries; i++) {
             try {
                 return await pool.query(query, params);
             } catch (err) {
-                error('Error running query:', query, err);
+                error(`Error running query: ${query}\n${JSON.stringify(err, null, 4)}`);
                 await new Promise(res => setTimeout(res, 2000));
             }
         }
@@ -130,7 +130,7 @@ const init = async () => {
             const onReconnect = async (attempt) => {
 
                 const updateTableWithCDC = async (tableName, table) => {
-                    let newRows = await query(`SELECT * FROM ${tableName} WHERE ${cdcId} > ${table.cdc.count};`);
+                    let newRows = await runQuery(`SELECT * FROM ${tableName} WHERE ${cdcId} > ${table.cdc.count};`);
                     newRows.forEach(data => {
                         const action = 'INSERT';
                         const { rows, indexed, cdc, pks, schema } = table;
@@ -371,8 +371,8 @@ const init = async () => {
                             throw new Error(`Invalid action: ${action}`);
                     }
                 }, {});
-                if(actualRow == null)
-                    console.log({tableName, actualRow, cdcRows})
+                if (actualRow == null)
+                    console.log({ tableName, actualRow, cdcRows })
                 let ok = Object.keys(actualRow).reduce((p, k) => p && actualRow[k] === cdcRow[k], true);
                 if (!ok) {
                     const str = `Table ${tableName} not matching row with cdc: ${JSON.stringify(actualRow)} !== ${JSON.stringify(cdcRow)}`
@@ -397,7 +397,7 @@ const init = async () => {
                     warn(`Table ${tables[i]} has NO INDEXED!`);
                 if (cdc?.keys == null)
                     warn(`Table ${tables[i]} has NO CDC!`);
-                if (cdc != null && indexed  != null) {
+                if (cdc != null && indexed != null) {
                     checkAllCDCIndexes(tables[i], cdc.rows);
                     Object.keys(cdc.keys).forEach(key => checkKey(tables[i], indexed[key], cdc.keys[key]));
                 }
@@ -646,7 +646,7 @@ const init = async () => {
         const keys = Object.keys(row).filter(key => tableSchema.find(c => c.name === key));
         const values = keys.map(key => row[key]);
         const query = `INSERT INTO "${tableName}" ("${keys.join('", "')}") VALUES (${keys.map((_, i) => '$' + (i + 1)).join(', ')}) RETURNING *`;
-        const result = await raw(query, values);
+        const result = await runQuery(query, values);
         return result.rows[0];
     };
     const editRow = async (tableName, row) => {
@@ -661,7 +661,7 @@ const init = async () => {
         const whereStatement = pks.map((key, idx) => `"${key}" = $${values.length - pks.length + idx + 1}`).join(' AND ');
 
         const query = `UPDATE "${tableName}" SET ${setStatement} WHERE ${whereStatement};`;
-        const result = await raw(query, values);
+        const result = await runQuery(query, values);
         return result;
     };
     const delRow = async (tableName, row) => {
@@ -672,7 +672,7 @@ const init = async () => {
         const whereStatement = keys.map((key, idx) => `"${key}" = $${idx + 1}`).join(' AND ');
 
         const query = `DELETE FROM "${tableName}" WHERE ${whereStatement};`;
-        const result = await raw(query, values);
+        const result = await runQuery(query, values);
         return result;
     };
     const logInit = async () => {
@@ -683,10 +683,10 @@ const init = async () => {
 
     logInit();
     //fs.writeFileSync('./cache.json', JSON.stringify(await getCache(), null, 2));
-    return { schema, schemaHash, getCache, query, getRows, getRow, getPaginatedRows, getRowCDC, postRow, editRow, delRow };
+    return { schema, schemaHash, getCache, runQuery, getRows, getRow, getPaginatedRows, getRowCDC, postRow, editRow, delRow };
 };
 
-export const { schema, schemasHash, getCache, query, getRows, getRow, getPaginatedRows, getRowCDC, postRow, editRow, delRow } = await init();
+export const { schema, schemasHash, getCache, runQuery, getRows, getRow, getPaginatedRows, getRowCDC, postRow, editRow, delRow } = await init();
 
 export const addListener = (cb) => {
     notificationListeners.push(cb);
@@ -698,7 +698,7 @@ export const removeListener = (cb) => {
     else throw new Error('Listener not found!');
 }
 
-export default { schema, schemasHash, getCache, query, getRows, getRow, getPaginatedRows, postRow, editRow, delRow, addListener, removeListener };
+export default { schema, schemasHash, getCache, runQuery, getRows, getRow, getPaginatedRows, postRow, editRow, delRow, addListener, removeListener };
 
 // let filters = {
 //     "pageNo": 0, //Optional, default value is 0.

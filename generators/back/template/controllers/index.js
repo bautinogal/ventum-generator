@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 import {
-  schema as tablesSchema, schemasHash, getCache, query, getRows, getRow, getPaginatedRows, getRowCDC,
+  schema as tablesSchema, schemasHash, getCache, runQuery, getRows, getRow, getPaginatedRows, getRowCDC,
   postRow, editRow, delRow, addListener, removeListener
 } from '../lib/tables/index.js';
 
@@ -61,21 +61,21 @@ export default build([
     }
   },
   {
-    route: '/api/tables-schema',
-    description: 'Authenticate user by email and password, returns JWT, rols and permissions.',
-    method: 'get',
-    validations: {},
-    action: async (req, res) => {
-      res.body = tablesSchema;
-    }
-  },
-  {
     route: '/api/schema',
-    description: 'Authenticate user by email and password, returns JWT, rols and permissions.',
+    description: 'JSON schema.',
     method: 'get',
     validations: {},
     action: async (req, res) => {
       res.body = schema;
+    }
+  },
+  {
+    route: '/api/tables-schema',
+    description: 'Schema of sql tables.',
+    method: 'get',
+    validations: {},
+    action: async (req, res) => {
+      res.body = tablesSchema;
     }
   },
   {
@@ -114,6 +114,15 @@ export default build([
     validations: {},
     action: async (req, res) => {
       res.body = (await getCache())[req.params.tableName];
+    }
+  },
+  {
+    route: '/api/tables/:tableName',
+    description: 'Post row in table.',
+    method: 'post',
+    validations: {},
+    action: async (req, res) => {
+      res.body = await postRow(req.params.tableName, req.body);
     }
   },
 ]);
