@@ -53,6 +53,13 @@
                     "items": {
                         "$ref": "#/definitions/file"
                     }
+                },
+                "preForms": {
+                    "title": "Pre Forms",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/preForm"
+                    }
                 }
             }
         },
@@ -125,6 +132,14 @@
                     "type": "grid",
                     "params": {
                         "table": "rols"
+                    }
+                },
+                "preForms": {
+                    "title": "Pre Forms",
+                    "icon": "AdminPanelSettings",
+                    "type": "grid",
+                    "params": {
+                        "table": "preForms"
                     }
                 }
             }
@@ -334,6 +349,90 @@
             "type": "string",
             "comment": "Will autopolulate with the tables on export, do not modify",
             "enum": []
+        },
+        "preForm":{
+            "type": "object",
+            "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "fav_ico": {
+                        "type": "string"
+                    },
+                    "logo": {
+                        "type": "string"
+                    },
+                    "payment_method": {
+                        "type": "string"
+                    },
+                    "is_physical_store": {
+                        "type": "string"
+                    },
+                    "is_price_visible": {
+                        "type": "string"
+                    },
+                    "is_whatsapp_store": {
+                        "type": "string"
+                    },
+                    "cuotas": {
+                        "type": "string"
+                    },
+                    "shipping": {
+                        "type": "string"
+                    },
+                    "is_required_login": {
+                        "type": "string"
+                    },
+                    "domain": {
+                        "type": "string"
+                    },
+                    "instagram ": {
+                        "type": "string"
+                    },
+                    "facebook": {
+                        "type": "string"
+                    },
+                    "whatsapp": {
+                        "type": "string"
+                    },
+                    "address": {
+                        "type": "string"
+                    },
+                    "geo_loc": {
+                        "type": "string"
+                    },
+                    "phone": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "template": {
+                        "type": "string"
+                    },
+                    "theme": {
+                        "type": "string"
+                    },
+                    "is_cookies_required": {
+                        "type": "string"
+                    },
+                    "about_us": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "meta_desc": {
+                        "type": "string"
+                    },
+                    "user_admin_mail": {
+                        "type": "string"
+                    },
+                    "custom_email": {
+                        "type": "string"
+                    }
+            },
+            "required": [ ]
         }
     }
 }
