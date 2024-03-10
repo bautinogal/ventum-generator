@@ -94,7 +94,7 @@ const GenericCat = ({ selectedCat, auth }) => {
                         <DialogContentText>
                             <Form
                                 {...toJSONFormParams(schema?.[selectedCat]?.items)}
-                                onSubmit={(v) => console.log(v) || dispatch(postRow({ table: selectedCat, row: v.formData }))}
+                                onSubmit={(v) => setOpen(false) || dispatch(postRow({ schema, table: selectedCat, row: v.formData }))}
                                 onError={e => console.log('errors', e, toJSONFormParams(schema?.[selectedCat]?.items))}
                                 validator={validator}
                             />

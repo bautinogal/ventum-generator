@@ -6,7 +6,7 @@ import http from '../lib/http/index.js';
 export const getData = createAsyncThunk(
   'GET_CATEGORY_DATA',
   async (payload, thunkAPI) => {
-
+    console.log('GET_CATEGORY_DATA', payload)
     const addFkRows = async (tableRows, tableName, tableSchema, fkTableName) => {
       try {
         if (tableSchema.properties[fkTableName].type === 'object') {
@@ -53,10 +53,11 @@ export const postRow = createAsyncThunk(
   'POST_CATEGORY_ROW',
   async (payload, thunkAPI) => {
     try {
-      const { table, row } = payload;
+      const { table, row, schema } = payload;
       console.log('POST_CATEGORY_ROW', payload, `/api/tables/${table}`, row)
       let res = await http.post(`/api/tables/${table}`, {}, row)
-      thunkAPI.dispatch(getData());
+      thunkAPI.dispatch(getData({ schema, catName: table }));
+      return res;
     } catch (error) {
       console.log('ERROR', error)
     }
