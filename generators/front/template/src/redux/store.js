@@ -1,7 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authSlice from './reducers/authSlice';
 import dashboardSlice from '../pages/Dashboard/DashboardSlice';
-import genericCatSlice from '../components/GenericCatSlice';
+import genericCatSlice from '../components/GenericCat/GenericCatSlice';
 
 const store = configureStore({ 
     reducer: { 

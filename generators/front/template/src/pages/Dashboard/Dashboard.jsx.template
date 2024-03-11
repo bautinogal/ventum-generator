@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { getData, setSelectedCat, setIsExpanded } from "./DashboardSlice.js";
 
-import GenericCat from '../../components/GenericCat.jsx';
+import GenericCat from '../../components/GenericCat/GenericCat.jsx';
+import { cleanError, cleanMessage} from '../../components/GenericCat/GenericCatSlice.js';
 import { Avatar, Badge, Button, IconButton, Stack, Typography, } from '@mui/material';
 import { AdminPanelSettings, CreditCard, Delete, Event, Notifications as NotificationIcon, LocalActivity, Person, 
     Receipt, Timeline, Logout,  } from '@mui/icons-material';
@@ -10,6 +11,7 @@ import './Dashboard.css';
 
 import Rols from './Categories/Rols/Rols.jsx';
 //import DashboardCat from './DashboardCat/DashboardCat.jsx';
+import { SnackbarProvider, useSnackbar } from 'notistack';
 
 const Dashboard = (props) => {
 
@@ -17,6 +19,26 @@ const Dashboard = (props) => {
     useEffect(() => { dispatch(getData()) }, []);
 
     //const { logout, user, isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
+
+    const NotificationsSnackbars = () => {
+            
+            const { enqueueSnackbar } = useSnackbar();
+            const message = useSelector(state => state.genericCat.message);
+            const error = useSelector(state => state.genericCat.error);
+
+            useEffect(() => {
+                if (message){
+                    enqueueSnackbar(message, { variant: 'success', autoHideDuration: 3000});
+                    dispatch(cleanMessage());
+                }
+                if (error) {
+                    enqueueSnackbar(error, { variant: 'error', autoHideDuration: 3000 });
+                    dispatch(cleanError());
+                }
+            }, [message, error]);
+
+        return <></>
+        }
 
     const Sidebar = () => {
 
@@ -87,10 +109,14 @@ const Dashboard = (props) => {
         </div>
     };
 
-    return (<div className="container">
-        <Sidebar />
-        <Main />
-    </div>)
+    return (
+        <SnackbarProvider maxSnack={5}>
+            <NotificationsSnackbars />
+            <div className="container">
+                <Sidebar />
+                <Main />
+            </div>
+        </SnackbarProvider>)
 }
 
 // export default withAuthenticationRequired(Dashboard, { onRedirecting: () => <h1>Redirecting</h1> });

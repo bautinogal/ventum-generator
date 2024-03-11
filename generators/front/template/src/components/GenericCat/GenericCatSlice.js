@@ -1,12 +1,12 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { useSelector, useDispatch } from "react-redux";
-import http from '../lib/http/index.js';
+import http from '../../lib/http/index.js';
 //import { getPaginatedTable, getRowByPks, getTable } from '../../lib/tables/index.js';
 
 export const getData = createAsyncThunk(
   'GET_CATEGORY_DATA',
   async (payload, thunkAPI) => {
-    console.log('GET_CATEGORY_DATA', payload)
+
     const addFkRows = async (tableRows, tableName, tableSchema, fkTableName) => {
       try {
         if (tableSchema.properties[fkTableName].type === 'object') {
@@ -52,17 +52,10 @@ export const getData = createAsyncThunk(
 export const postRow = createAsyncThunk(
   'POST_CATEGORY_ROW',
   async (payload, thunkAPI) => {
-    try {
-      const { table, row, schema } = payload;
-      console.log('POST_CATEGORY_ROW', payload, `/api/tables/${table}`, row)
-      let res = await http.post(`/api/tables/${table}`, {}, row)
-      thunkAPI.dispatch(getData({ schema, catName: table }));
-      return res;
-    } catch (error) {
-      console.log('ERROR', error)
-    }
-
-    return res;
+    const { table, row, schema } = payload;
+    let res = await http.post(`/api/tables/${table}`, {}, row);
+    await thunkAPI.dispatch(getData({ schema, catName: table })).unwrap();
+    return { res, message: `ID:${res.body?.id} insertado en ${table}` };
   },
 );
 
@@ -82,12 +75,12 @@ const genericCatSlice = createSlice({
   },
   extraReducers: {
     [getData.pending]: (state, action) => ({ ...state, fetching: state.fetching + 1 }),
-    [getData.rejected]: (state, action) => ({ ...state, fetching: state.fetching - 1 }),
+    [getData.rejected]: (state, action) => ({ ...state, error: action.error.message, fetching: state.fetching - 1 }),
     [getData.fulfilled]: (state, action) => ({ ...state, data: action.payload, fetching: state.fetching - 1 }),
 
     [postRow.pending]: (state, action) => ({ ...state, fetching: state.fetching + 1 }),
-    [postRow.rejected]: (state, action) => ({ ...state, fetching: state.fetching - 1 }),
-    [postRow.fulfilled]: (state, action) => ({ ...state, fetching: state.fetching - 1 }),
+    [postRow.rejected]: (state, action) => ({ ...state, error: action.error.message, fetching: state.fetching - 1 }),
+    [postRow.fulfilled]: (state, action) => ({ ...state, message: action.payload.message, fetching: state.fetching - 1 }),
   },
 })
 

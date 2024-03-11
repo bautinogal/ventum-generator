@@ -1,8 +1,7 @@
-import http from '../lib/http/index.js'
 import React, { useEffect, useState, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
-    Avatar, Badge, Box, Button, Breadcrumbs, Card, CardContent, Dialog, DialogActions, DialogContent, Divider, Grid, IconButton, DialogContentText,
+    Avatar, Badge, Box, Button, Breadcrumbs, Card, CardContent, CircularProgress, Dialog, DialogActions, DialogContent, Divider, Grid, IconButton, DialogContentText,
     DialogTitle, Stack, Tab, Tabs, Typography, Tooltip, Popper, Fade, Link, List, ListItem, ListItemButton, ListItemIcon, ListItemText
 } from '@mui/material';
 import {
@@ -13,14 +12,13 @@ import { DataGrid, GridToolbar, GridActionsCellItem } from '@mui/x-data-grid';
 
 import { getData, postRow } from "./GenericCatSlice.js";
 import validator from '@rjsf/validator-ajv8';
-import Ajv from 'ajv';
-const ajv = new Ajv({ allErrors: true, useDefaults: true });
 import Form from '@rjsf/mui';
 
 import { styled } from '@mui/material/styles';
 import { tooltipClasses } from '@mui/material/Tooltip';
 
 const GenericCat = ({ selectedCat, auth }) => {
+
 
     const { rows, pks, fks } = useSelector(state => state.genericCat.data);
     const schema = useSelector(state => state.dashboard.data?.schema?.properties.tables?.properties);
@@ -74,8 +72,22 @@ const GenericCat = ({ selectedCat, auth }) => {
     useEffect(refreshData, [selectedCat]);
 
     const DataGridDemo = () => {
+
         const [selectedRow, setSelectedRow] = useState();
         const [checkboxSelection, setCheckboxSelection] = useState([]);
+
+        const LoadingDialog = () => {
+            const fetching = useSelector(state => state.genericCat.fetching);
+            return <Dialog open={fetching > 0}
+                PaperProps={{ style: { backgroundColor: 'transparent', boxShadow: 'none' } }}
+                BackdropProps={{ sx: { backgroundColor: 'rgba(0, 0, 0, 0.75)', } }}
+            >
+                <DialogContent sx={{ backgroundColor: 'transparent', overflow: "hidden" }}>
+                    <CircularProgress sx={{ color: 'var(--primary-contrastText) !important' }} />
+                </DialogContent>
+            </Dialog>
+
+        };
 
         const Topbar = () => {
             const [open, setOpen] = useState(false);
@@ -83,7 +95,13 @@ const GenericCat = ({ selectedCat, auth }) => {
             const handleClose = (e, reason) => (reason === "backdropClick") ? null : setOpen(false);
 
             const AddModal = () => {
-                return (<Dialog open={open} onClose={handleClose} maxWidth={'lg'} fullWidth disableBackdropClick>
+                return (<Dialog open={open} onClose={handleClose} maxWidth={'lg'} fullWidth
+                    BackdropProps={{
+                        sx: {
+                            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                            backdropFilter: 'blur(3px)',
+                        },
+                    }}>
                     <DialogTitle id="titulo-dialogo">
                         <IconButton
                             onClick={handleClose}
@@ -378,6 +396,7 @@ const GenericCat = ({ selectedCat, auth }) => {
 
         return (
             <Box sx={{ position: 'relative', height: '100%', width: '100%', backgroundColor: 'white' }}>
+                <LoadingDialog />
                 <Topbar />
                 {selectedRow ? <RowActions /> : <Table />}
             </Box>
