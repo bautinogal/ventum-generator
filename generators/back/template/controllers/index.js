@@ -38,13 +38,14 @@ export default build([
     action: async (req, res) => {
       const { email, password } = req.body;
       //const user = await getRow('users', { email, password: await crypto.hash(password) });
-      const user = { ...await getRow('users', { email, password }) };
+      const user = await getRow('users', { email, password });
       if (!user) {
         res.status(401);
         res.body = { error: 'Invalid email or password' };
       } else {
-        delete user.password;
-        const rolIds = (await getRows('usersRolsMap', { userId: user.id })).map(x => x.rolId);
+        const _user = { ...user };
+        delete _user.password;
+        const rolIds = (await getRows('usersRolsMap', { userId: _user.id })).map(x => x.rolId);
         const rols = await getRows('rols', rol => rolIds.includes(rol.id));
         //const rolIds = rols.map(row => row.rolId);
         const customPermissionsIds = Array.from(new Set((await getRows('rolsCustomPermissionsMap',
@@ -54,9 +55,9 @@ export default build([
         const customPermissions = await getRows('customPermissions', row => customPermissionsIds.includes(row.id));
         const genericPermissions = await getRows('genericPermissions', row => genericPermissionsIds.includes(row.id));
 
-        const jwt = crypto.createJWT({ id: user.id, expiration: Date.now() + env.jwt.duration });
+        const jwt = crypto.createJWT({ id: _user.id, expiration: Date.now() + env.jwt.duration });
         res.headers = { auth: jwt };
-        res.body = { user, rols, customPermissions, genericPermissions, jwt };
+        res.body = { user: _user, rols, customPermissions, genericPermissions, jwt };
       }
     }
   },

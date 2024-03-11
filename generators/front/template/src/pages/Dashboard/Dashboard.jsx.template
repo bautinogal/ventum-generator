@@ -12,6 +12,7 @@ import './Dashboard.css';
 import Rols from './Categories/Rols/Rols.jsx';
 //import DashboardCat from './DashboardCat/DashboardCat.jsx';
 import { SnackbarProvider, useSnackbar } from 'notistack';
+import { signOut } from "../../redux/reducers/authSlice.js";
 
 const Dashboard = (props) => {
 
@@ -81,7 +82,7 @@ const Dashboard = (props) => {
         const LogOut = () => {
             return (<div className="sidebar-category-logout">
                 <IconButton children={<Logout className="sidebar-category-button-icon" />} />
-                <Button className="sidebar-category-button-text" children={'LOG OUT'} />
+                <Button className="sidebar-category-button-text" onClick={e => dispatch(signOut())} children={'LOG OUT'} />
             </div>);
         };
 
