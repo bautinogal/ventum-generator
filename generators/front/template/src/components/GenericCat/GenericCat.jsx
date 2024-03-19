@@ -251,6 +251,7 @@ const GenericCat = ({ selectedCat, auth }) => {
                 };
 
                 const columns = [...Object.entries(tableSchema || {})
+                    .filter(([k, x]) => !x.hidden)
                     .map(([k, x]) => {
 
                     const getFlexSize = (x) => {
