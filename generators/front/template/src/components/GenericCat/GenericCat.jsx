@@ -250,7 +250,8 @@ const GenericCat = ({ selectedCat, auth }) => {
                     }
                 };
 
-                const columns = [...Object.entries(tableSchema || {}).map(([k, x]) => {
+                const columns = [...Object.entries(tableSchema || {})
+                    .map(([k, x]) => {
 
                     const getFlexSize = (x) => {
                         if (x.datatype === 'array') return 60;

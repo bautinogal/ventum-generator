@@ -115,13 +115,19 @@ export const generate = async (schema, tables) => {
         logoSrc: schema.properties.UI.style.logo,
         sidebarComponents: Object.entries(schema?.properties?.UI?.categories || {}).map(([key, cat], i) => {
             return `<div onClick={(e) => e.stopPropagation() || dispatch(setSelectedCat("${key}"))} className="sidebar-category-button">
-                <IconButton children={<${cat.icon}/>} />
-                <Button className="sidebar-category-button-text" children={"${cat?.title?.toUpperCase() || key.toUpperCase()}"} />
+                <IconButton children={<${cat.icon}/>} sx={{color: 'white'}}/>
+                <Button className="sidebar-category-button-text" 
+                    sx={{
+                        color: selectedCat === '${key}' ? 'var(--primary-main) !important' : 'white',
+                        fontWeight: selectedCat === '${key}' ? 'bold' : 'medium' 
+                    }}
+                    children={"${cat?.title?.toUpperCase() || key.toUpperCase()}"} 
+                />
             </div>`
         }).join('\n'),
-};
+    };
 
-await copyAndReplaceDir(path.join(__dirname, 'template'), path.join(__dirname, '../../../output/front'), replace);
+    await copyAndReplaceDir(path.join(__dirname, 'template'), path.join(__dirname, '../../../output/front'), replace);
 
 };
 

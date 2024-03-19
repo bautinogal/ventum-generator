@@ -13,8 +13,28 @@ import {
   postRow, editRow, delRow, addListener, removeListener
 } from '../lib/tables/index.js';
 
-let schema = fs.readFileSync(path.join(__dirname, '../../schema.json'), 'utf8');
+let schema = JSON.parse(fs.readFileSync(path.join(__dirname, '../../schema.json'), 'utf8'));
 
+const removeHiddenCols = (() => {
+  const hiddenCols = Object.entries(schema.properties.tables.properties)
+    .reduce((p, [tableName, tableSchema]) => {
+      p[tableName] = Object.entries(tableSchema.items.properties)
+        .filter(([col, colSchema]) => colSchema.hidden)
+        .map(([col, colSchema]) => col);
+      return p;
+    }, {});
+
+    console.log('hiddenCols', hiddenCols);  
+
+  return (row, tableName) => {
+    const tableHiddenCols = hiddenCols[tableName];
+    return Object.entries(row).reduce((p, [col, val]) => {
+      if (!tableHiddenCols.includes(col)) p[col] = val;
+      return p;
+    }, {});
+  };
+
+})();
 
 export default build([
   {
@@ -88,6 +108,8 @@ export default build([
       res.body = req?.query?.q ?
         await getPaginatedRows(req.params.tableName, req.query.q) :
         await getRows(req.params.tableName);
+
+      res.body = res.body.map(x => removeHiddenCols(x, req.params.tableName));
     }
   },
   {
@@ -97,6 +119,7 @@ export default build([
     validations: {},
     action: async (req, res) => {
       res.body = await getRow(req.params.tableName, JSON.parse(req.params.where));
+      res.body = removeHiddenCols(res.body, req.params.tableName);
     }
   },
   {
@@ -106,6 +129,7 @@ export default build([
     validations: {},
     action: async (req, res) => {
       res.body = await getRowCDC(req.params.tableName, JSON.parse(req.params.where));
+      res.body = res.body.map(x => removeHiddenCols(x, req.params.tableName));
     }
   },
   {

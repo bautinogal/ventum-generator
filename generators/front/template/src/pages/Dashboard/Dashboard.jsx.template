@@ -5,9 +5,11 @@ import { getData, setSelectedCat, setIsExpanded } from "./DashboardSlice.js";
 import GenericCat from '../../components/GenericCat/GenericCat.jsx';
 import { cleanError, cleanMessage} from '../../components/GenericCat/GenericCatSlice.js';
 import { Avatar, Badge, Button, IconButton, Stack, Typography, } from '@mui/material';
-import { AdminPanelSettings, CreditCard, Delete, Event, Notifications as NotificationIcon, LocalActivity, Person, 
-    Receipt, Timeline, Logout,  } from '@mui/icons-material';
+import { Add, AdminPanelSettings, AttachFile, Check, Close, CreditCard, Comment, Delete, Event, History, 
+Notifications as NotificationIcon, LocalActivity, Person, Receipt, Refresh, Timeline, Edit, Note, MoreHoriz, Visibility, Logout } from '@mui/icons-material';
 import './Dashboard.css';
+
+
 
 import Rols from './Categories/Rols/Rols.jsx';
 //import DashboardCat from './DashboardCat/DashboardCat.jsx';
@@ -18,6 +20,8 @@ const Dashboard = (props) => {
 
     const dispatch = useDispatch();
     useEffect(() => { dispatch(getData()) }, []);
+    const selectedCat = useSelector(state => state.dashboard.selectedCat);
+
 
     //const { logout, user, isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
 
@@ -46,6 +50,7 @@ const Dashboard = (props) => {
         //const isExpanded = useSelector(state => state.dashboard.isExpanded);
         const isExpanded = true;
         const schema = useSelector(state => state.dashboard.data?.schema);
+        
 
         const Logo = () => {
             return (<div className="logo-container" style={{ padding: '1.5rem', paddingLeft: '.5rem' }}>
@@ -101,7 +106,7 @@ const Dashboard = (props) => {
         //const isExpanded = useSelector(state => state.dashboard.isExpanded);
         const isExpanded = true;
         const schema = useSelector(state => state.dashboard.data?.schema);
-        const selectedCat = useSelector(state => state.dashboard.selectedCat);
+        
 
 
         return <div className={`main-content ${isExpanded ? 'expanded' : ''}`}>

@@ -123,7 +123,13 @@
                     "icon": "Person",
                     "type": "grid",
                     "params": {
-                        "table": "users"
+                        "table": "users",
+                        "actions": {
+                            "create": true,
+                            "update": true,
+                            "delete": true,
+                            "history": true
+                        }
                     }
                 },
                 "rols": {
@@ -136,7 +142,7 @@
                 },
                 "preForms": {
                     "title": "Pre Forms",
-                    "icon": "AdminPanelSettings",
+                    "icon": "Note",
                     "type": "grid",
                     "params": {
                         "table": "preForms"
@@ -159,7 +165,8 @@
                 "password": {
                     "title": "Password",
                     "type": "string",
-                    "x-hashed": true,
+                    "hashed": true,
+                    "hidden": true,
                     "minLength": 8,
                     "maxLength": 64
                 },
@@ -350,89 +357,89 @@
             "comment": "Will autopolulate with the tables on export, do not modify",
             "enum": []
         },
-        "preForm":{
+        "preForm": {
             "type": "object",
             "properties": {
-                    "name": {
-                        "type": "string"
-                    },
-                    "fav_ico": {
-                        "type": "string"
-                    },
-                    "logo": {
-                        "type": "string"
-                    },
-                    "payment_method": {
-                        "type": "string"
-                    },
-                    "is_physical_store": {
-                        "type": "string"
-                    },
-                    "is_price_visible": {
-                        "type": "string"
-                    },
-                    "is_whatsapp_store": {
-                        "type": "string"
-                    },
-                    "cuotas": {
-                        "type": "string"
-                    },
-                    "shipping": {
-                        "type": "string"
-                    },
-                    "is_required_login": {
-                        "type": "string"
-                    },
-                    "domain": {
-                        "type": "string"
-                    },
-                    "instagram ": {
-                        "type": "string"
-                    },
-                    "facebook": {
-                        "type": "string"
-                    },
-                    "whatsapp": {
-                        "type": "string"
-                    },
-                    "address": {
-                        "type": "string"
-                    },
-                    "geo_loc": {
-                        "type": "string"
-                    },
-                    "phone": {
-                        "type": "string"
-                    },
-                    "email": {
-                        "type": "string"
-                    },
-                    "template": {
-                        "type": "string"
-                    },
-                    "theme": {
-                        "type": "string"
-                    },
-                    "is_cookies_required": {
-                        "type": "string"
-                    },
-                    "about_us": {
-                        "type": "string"
-                    },
-                    "title": {
-                        "type": "string"
-                    },
-                    "meta_desc": {
-                        "type": "string"
-                    },
-                    "user_admin_mail": {
-                        "type": "string"
-                    },
-                    "custom_email": {
-                        "type": "string"
-                    }
+                "name": {
+                    "type": "string"
+                },
+                "fav_ico": {
+                    "type": "string"
+                },
+                "logo": {
+                    "type": "string"
+                },
+                "payment_method": {
+                    "type": "string"
+                },
+                "is_physical_store": {
+                    "type": "string"
+                },
+                "is_price_visible": {
+                    "type": "string"
+                },
+                "is_whatsapp_store": {
+                    "type": "string"
+                },
+                "cuotas": {
+                    "type": "string"
+                },
+                "shipping": {
+                    "type": "string"
+                },
+                "is_required_login": {
+                    "type": "string"
+                },
+                "domain": {
+                    "type": "string"
+                },
+                "instagram ": {
+                    "type": "string"
+                },
+                "facebook": {
+                    "type": "string"
+                },
+                "whatsapp": {
+                    "type": "string"
+                },
+                "address": {
+                    "type": "string"
+                },
+                "geo_loc": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "template": {
+                    "type": "string"
+                },
+                "theme": {
+                    "type": "string"
+                },
+                "is_cookies_required": {
+                    "type": "string"
+                },
+                "about_us": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "meta_desc": {
+                    "type": "string"
+                },
+                "user_admin_mail": {
+                    "type": "string"
+                },
+                "custom_email": {
+                    "type": "string"
+                }
             },
-            "required": [ ]
+            "required": []
         }
     }
 }
